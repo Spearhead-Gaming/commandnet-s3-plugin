@@ -22,7 +22,7 @@ class CommandNetS3Plugin extends AbstractForumifyPlugin
     {
         return new PluginMetadata(
             'Command Net S3',
-            'MDEV ',
+            'MajesticDev ',
             'S3 (Operations) tooling for Zeus/GM support, mission development, and server administration.',
             'https://example.com', // TODO: replace with real domain once purchased
         );
