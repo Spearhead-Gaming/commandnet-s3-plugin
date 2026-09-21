@@ -1,0 +1,48 @@
+{% extends '@Forumify/admin/base.html.twig' %}
+
+{% block title_page %}{{ sop.title }} acknowledgements{% endblock %}
+
+{% block body %}
+    <h1 class="mb-1">{{ sop.title }}</h1>
+
+    {% if version is null %}
+        <p>This document has no versions yet, so there is nothing to acknowledge. Add one under SOP Versions.</p>
+    {% else %}
+        <p class="text-small mb-4">
+            Current version <strong>{{ version.label }}</strong>, published {{ version.createdAt|format_date }}.
+            {{ acknowledgements|length }} acknowledged, {{ pending|length }} still to go.
+        </p>
+
+        <div class="card mb-4">
+            <div class="card-title">Not yet acknowledged</div>
+            {% if pending is empty %}
+                <div class="card-body"><p class="text-small">Everyone enlisted has acknowledged this version.</p></div>
+            {% else %}
+                <ul class="card-body p-0">
+                    {% for soldier in pending %}
+                        <li class="p-2 pr-4 pl-4{% if not loop.last %} border-b{% endif %}">
+                            {{ soldier.user.displayName }}
+                            {% if soldier.callsign %}<span class="text-small">({{ soldier.callsign }})</span>{% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <div class="card-title">Acknowledged</div>
+            {% if acknowledgements is empty %}
+                <div class="card-body"><p class="text-small">Nobody has acknowledged this version yet.</p></div>
+            {% else %}
+                <ul class="card-body p-0">
+                    {% for ack in acknowledgements %}
+                        <li class="p-2 pr-4 pl-4 flex items-center justify-between{% if not loop.last %} border-b{% endif %}">
+                            <span>{{ ack.user.displayName }}</span>
+                            <span class="text-small">{{ ack.createdAt|format_date }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endblock %}

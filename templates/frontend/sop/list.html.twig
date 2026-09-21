@@ -1,0 +1,30 @@
+{% extends '@Forumify/frontend/base.html.twig' %}
+
+{% block title_page %}SOP Library{% endblock %}
+
+{% block body %}
+    <h1 class="mb-4">SOP Library</h1>
+
+    {% if rows is empty %}
+        <p>No documents have been published yet.</p>
+    {% else %}
+        <div class="card">
+            <ul class="card-body p-0">
+                {% for row in rows %}
+                    <li class="p-2 pr-4 pl-4 flex items-center justify-between gap-2{% if not loop.last %} border-b{% endif %}">
+                        <div>
+                            <a href="{{ path('command_net_s3_sop_show', { id: row.sop.id }) }}" class="text-bold">{{ row.sop.title }}</a>
+                            <span class="text-small">v{{ row.version.label }}</span>
+                            {% if row.sop.description %}
+                                <p class="text-small mb-0">{{ row.sop.description }}</p>
+                            {% endif %}
+                        </div>
+                        <span class="tag {{ row.acknowledged ? '' : 'tag-error' }}">
+                            {{ row.acknowledged ? 'Acknowledged' : 'Needs acknowledgment' }}
+                        </span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+{% endblock %}

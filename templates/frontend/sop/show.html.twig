@@ -1,0 +1,43 @@
+{% extends '@Forumify/frontend/base.html.twig' %}
+
+{% block title_page %}{{ sop.title }}{% endblock %}
+
+{% block body %}
+    <div class="card mb-4">
+        <div class="card-body flex items-center justify-between gap-2">
+            <div>
+                <h1 class="mb-1">{{ sop.title }}</h1>
+                <p class="text-small mb-0">Version {{ version.label }} &middot; published {{ version.createdAt|format_date }}</p>
+            </div>
+            {% if acknowledged %}
+                <span class="tag">Acknowledged</span>
+            {% elseif canAcknowledge %}
+                <form method="post" action="{{ path('command_net_s3_sop_acknowledge', { id: sop.id }) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('sop_acknowledge_' ~ sop.id) }}">
+                    <input type="hidden" name="version" value="{{ version.id }}">
+                    <button type="submit" class="btn-primary">I have read and understand this</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">{{ version.content|rich }}</div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-title">Changelog</div>
+        <ul class="card-body p-0">
+            {% for v in sop.versions %}
+                <li class="p-2 pr-4 pl-4{% if not loop.last %} border-b{% endif %}">
+                    <strong>{{ v.label }}</strong> <span class="text-small">{{ v.createdAt|format_date }}</span>
+                    {% if v.changelog %}
+                        <p class="text-small mb-0">{{ v.changelog|nl2br }}</p>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <a class="btn-link" href="{{ path('command_net_s3_sop_list') }}"><i class="ph ph-arrow-left"></i> Back to the library</a>
+{% endblock %}
