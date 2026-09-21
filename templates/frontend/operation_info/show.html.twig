@@ -1,0 +1,16 @@
+{% extends '@Forumify/frontend/base.html.twig' %}
+
+{% block title_page %}{{ operation ? operation.title : 'Current Operation' }}{% endblock %}
+
+{% block body %}
+    {% if operation is null %}
+        <div class="card">
+            <div class="card-body">
+                <h1 class="mb-2">No current operation</h1>
+                <p class="mb-0">There is no operation running or scheduled right now. Check back once one has been posted.</p>
+            </div>
+        </div>
+    {% else %}
+        {% include '@CommandNetS3Plugin/frontend/operation_info/_page.html.twig' %}
+    {% endif %}
+{% endblock %}

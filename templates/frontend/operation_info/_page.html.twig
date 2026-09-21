@@ -1,0 +1,430 @@
+{#
+  The operation information page body, ported from the community's static operations-page design.
+  Every value comes from the operation, its briefing, its Operation Page, its RSVPs and its server, so
+  nothing here is hand-edited per operation. Sections only render when they have something to show.
+  All output is escaped by Twig; the only trusted HTML is the rich text the rest of the site already trusts.
+#}
+{% set orderNumber = page and page.orderNumber ? page.orderNumber : null %}
+{% set hasOpord = briefing or operation.content %}
+{% set statusClass = operation.status.value == 'completed' ? ' is-done' : (operation.status.value == 'cancelled' ? ' is-cancelled' : '') %}
+{% set tz = operation.startDateTime|date('T') %}
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+.ops{
+  --bg:#0d0f0b; --panel:#151810; --panel2:#1b1f15; --line:#2c3223;
+  --olive:#6b7a3a; --olive-hi:#8fa04a; --tan:#c8b98a; --tan-dim:#8f8663;
+  --text:#d9d8c9; --muted:#8b8d7a; --alert:#c9482e; --ok:#7fae4c; --warn:#d6a336;
+  --head:'Oswald','Bahnschrift','Arial Narrow',Impact,sans-serif;
+  --mono:'Share Tech Mono','Consolas','Courier New',monospace;
+  font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+  color:var(--text); background:var(--bg); line-height:1.6;
+  max-width:1200px; margin:0 auto; padding:0 0 40px; box-sizing:border-box;
+  background-image:
+    linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+  background-size:32px 32px;
+}
+.ops *,.ops *::before,.ops *::after{box-sizing:border-box}
+.ops a{color:var(--tan);text-decoration:none}
+.ops a:hover{color:#fff}
+.ops h1,.ops h2,.ops h3,.ops h4{font-family:var(--head);text-transform:uppercase;letter-spacing:.08em;margin:0;font-weight:600;color:#fff}
+.ops p{margin:0 0 .8em}
+
+.ops .ops-class{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  background:var(--olive);color:#0d0f0b;font-family:var(--mono);font-size:.78rem;
+  letter-spacing:.2em;padding:6px 18px;text-transform:uppercase;font-weight:700}
+
+.ops .ops-hero{position:relative;padding:56px 32px 44px;border:1px solid var(--line);border-top:0;
+  background:
+    linear-gradient(180deg,rgba(13,15,11,.55),rgba(13,15,11,.96)),
+    repeating-linear-gradient(135deg,#1a1e13 0 14px,#161a10 14px 28px);
+  overflow:hidden}
+.ops .ops-hero::after{content:"";position:absolute;right:-60px;top:-60px;width:320px;height:320px;
+  border:2px solid rgba(200,185,138,.12);border-radius:50%;
+  box-shadow:0 0 0 40px rgba(200,185,138,.04),0 0 0 80px rgba(200,185,138,.03)}
+.ops .ops-eyebrow{font-family:var(--mono);color:var(--olive-hi);letter-spacing:.3em;font-size:.85rem;text-transform:uppercase}
+.ops .ops-title{font-size:clamp(2.2rem,6vw,4.4rem);line-height:1.02;margin:10px 0 8px;letter-spacing:.06em}
+.ops .ops-sub{max-width:640px;color:var(--muted);font-size:1.05rem}
+.ops .ops-status{display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:6px 14px;
+  border:1px solid var(--olive);font-family:var(--mono);font-size:.85rem;letter-spacing:.15em;text-transform:uppercase;color:var(--ok)}
+.ops .ops-status i{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:opsPulse 1.6s infinite}
+.ops .ops-status.is-done{color:var(--tan)}
+.ops .ops-status.is-done i{background:var(--tan);box-shadow:none;animation:none}
+.ops .ops-status.is-cancelled{color:var(--alert);border-color:var(--alert)}
+.ops .ops-status.is-cancelled i{background:var(--alert);box-shadow:none;animation:none}
+@keyframes opsPulse{50%{opacity:.35}}
+.ops .ops-hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px;position:relative;z-index:1}
+
+.ops .btn{display:inline-flex;align-items:center;gap:10px;padding:13px 24px;font-family:var(--head);
+  letter-spacing:.14em;text-transform:uppercase;font-size:.95rem;font-weight:600;cursor:pointer;
+  border:1px solid var(--olive);color:#fff;background:transparent;transition:.15s;
+  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.ops .btn:hover{background:rgba(107,122,58,.25);color:#fff}
+.ops .btn-primary{background:var(--olive);color:#0d0f0b;border-color:var(--olive)}
+.ops .btn-primary:hover{background:var(--olive-hi);color:#0d0f0b}
+.ops .btn svg{width:18px;height:18px;flex:none}
+
+.ops .ops-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:var(--line);
+  border:1px solid var(--line);border-top:0}
+.ops .fact{background:var(--panel);padding:16px 20px}
+.ops .fact small{display:block;font-family:var(--mono);color:var(--tan-dim);letter-spacing:.2em;text-transform:uppercase;font-size:.7rem}
+.ops .fact b{font-family:var(--head);font-size:1.25rem;letter-spacing:.05em;color:#fff;font-weight:500}
+.ops .fact.countdown b{color:var(--warn);font-family:var(--mono);font-size:1.3rem}
+.ops .fact .on{color:var(--ok)}
+.ops .fact .off{color:var(--alert)}
+
+.ops .ops-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;margin-top:24px;padding:0 16px}
+@media (max-width:960px){.ops .ops-grid{grid-template-columns:1fr}}
+.ops .ops-main,.ops .ops-side{display:flex;flex-direction:column;gap:24px;min-width:0}
+
+.ops .ops-nav{display:flex;flex-wrap:wrap;gap:0;margin:0;padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+.ops .ops-nav a{padding:14px 18px;font-family:var(--head);letter-spacing:.14em;text-transform:uppercase;font-size:.85rem;color:var(--muted);border-bottom:2px solid transparent}
+.ops .ops-nav a:hover{color:#fff;border-color:var(--olive-hi)}
+
+.ops .panel{background:var(--panel);border:1px solid var(--line);position:relative}
+.ops .panel::before{content:"";position:absolute;left:0;top:0;width:4px;height:100%;background:var(--olive)}
+.ops .panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:14px 20px 14px 24px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.ops .panel-head h2{font-size:1.15rem}
+.ops .panel-head span{font-family:var(--mono);font-size:.72rem;color:var(--tan-dim);letter-spacing:.18em;text-transform:uppercase}
+.ops .panel-body{padding:20px 22px 20px 26px}
+
+.ops .para-body h4{font-size:.85rem;color:var(--tan);margin:14px 0 6px;letter-spacing:.14em}
+.ops .para-body h4:first-child{margin-top:0}
+.ops .para-body ul,.ops .para-body ol{margin:0 0 .8em;padding-left:1.3em}
+.ops .para-body li{margin-bottom:4px}
+.ops .para-body li::marker{color:var(--olive-hi)}
+.ops .para-body img{max-width:100%;height:auto}
+
+.ops .timeline{list-style:none;margin:0;padding:0;position:relative}
+.ops .timeline::before{content:"";position:absolute;left:11px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.ops .timeline li{position:relative;padding:0 0 18px 40px}
+.ops .timeline li::before{content:"";position:absolute;left:4px;top:5px;width:16px;height:16px;background:var(--bg);border:2px solid var(--olive-hi);transform:rotate(45deg)}
+.ops .timeline time{font-family:var(--mono);color:var(--warn);font-size:.85rem;letter-spacing:.1em}
+.ops .timeline strong{display:block;font-family:var(--head);text-transform:uppercase;letter-spacing:.08em;color:#fff;font-weight:500}
+.ops .timeline span{color:var(--muted);font-size:.92rem}
+
+.ops .tbl-wrap{overflow-x:auto}
+.ops table{width:100%;border-collapse:collapse;font-size:.92rem}
+.ops th{text-align:left;font-family:var(--mono);font-weight:400;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--tan-dim);padding:10px 12px;border-bottom:1px solid var(--olive);white-space:nowrap}
+.ops td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+.ops tbody tr:hover td{background:rgba(107,122,58,.08)}
+.ops td.mono,.ops .mono{font-family:var(--mono)}
+.ops .dl{font-family:var(--mono);font-size:.75rem;letter-spacing:.12em;text-transform:uppercase}
+
+.ops .modbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.ops .modbar input{flex:1;min-width:180px;background:#0d0f0b;border:1px solid var(--line);color:var(--text);padding:10px 14px;font-family:var(--mono);font-size:.9rem}
+.ops .modbar input:focus{outline:1px solid var(--olive-hi);border-color:var(--olive-hi)}
+.ops .modpack{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;
+  border:1px dashed var(--olive);padding:16px 20px;margin-bottom:18px;background:rgba(107,122,58,.07)}
+.ops .modpack h3{font-size:1rem}
+.ops .modpack p{margin:2px 0 0;color:var(--muted);font-size:.88rem}
+
+.ops .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0;font-size:.92rem}
+.ops .kv dt{font-family:var(--mono);color:var(--tan-dim);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;padding-top:3px}
+.ops .kv dd{margin:0;color:var(--text)}
+.ops .callout{border-left:3px solid var(--alert);background:rgba(201,72,46,.08);padding:12px 16px;font-size:.92rem;margin:0 16px 0}
+.ops .callout b{font-family:var(--head);text-transform:uppercase;letter-spacing:.1em;color:var(--alert)}
+.ops .checklist{list-style:none;margin:0;padding:0}
+.ops .checklist li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.ops .checklist li:last-child{border:0}
+.ops .checklist li::before{content:"\25A1";color:var(--olive-hi);font-family:var(--mono)}
+.ops .links{display:grid;gap:8px}
+.ops .links a{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border:1px solid var(--line);background:#11140d;
+  font-family:var(--head);text-transform:uppercase;letter-spacing:.1em;font-size:.88rem}
+.ops .links a::after{content:"\2192";color:var(--olive-hi)}
+.ops .links a:hover{border-color:var(--olive-hi);background:rgba(107,122,58,.15)}
+
+.ops .org{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.ops .elem{border:1px solid var(--line);background:#11140d;padding:12px 14px}
+.ops .elem h4{font-size:.95rem;color:var(--tan)}
+.ops .elem small{font-family:var(--mono);color:var(--muted);font-size:.72rem;letter-spacing:.1em}
+.ops .elem ul{margin:8px 0 0;padding:0;list-style:none;font-size:.88rem}
+.ops .elem li{padding:2px 0;border-top:1px dotted var(--line)}
+.ops .elem li span{float:right;color:var(--tan-dim);font-family:var(--mono);font-size:.78rem}
+
+.ops .foot{text-align:center;color:var(--muted);font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;margin-top:32px}
+.ops [id]{scroll-margin-top:16px}
+@media print{.ops{background:#fff;color:#000}.ops .btn,.ops .modbar,.ops .ops-nav{display:none}}
+</style>
+
+<div class="ops">
+
+  <div class="ops-class">
+    <span>// Restricted &mdash; Unit Personnel Only</span>
+    <span>{% if orderNumber %}OPORD {{ orderNumber }} &bull; {% endif %}{{ operation.type.label }}</span>
+  </div>
+
+  <header class="ops-hero">
+    <div class="ops-eyebrow">Operation Information</div>
+    <h1 class="ops-title">{{ operation.title }}</h1>
+    {% if summary %}<p class="ops-sub">{{ summary }}</p>{% endif %}
+    <div class="ops-status{{ statusClass }}"><i></i> Status: {{ operation.status.label }}</div>
+    <div class="ops-hero-actions">
+      {% if presetUrl %}
+        <a class="btn btn-primary" href="{{ presetUrl }}" download>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
+          Download Mod-Pack
+        </a>
+      {% elseif mods %}
+        <a class="btn btn-primary" href="#modpack">Mod List</a>
+      {% endif %}
+      {% if hasOpord %}<a class="btn" href="#opord">Read OPORD</a>{% endif %}
+      <a class="btn" href="{{ path('command_net_operation_detail', { id: operation.id }) }}">RSVP / Roster</a>
+    </div>
+  </header>
+
+  <div class="ops-facts">
+    <div class="fact"><small>Date</small><b>{{ operation.startDateTime|date('D d M Y')|upper }}</b></div>
+    <div class="fact"><small>Start</small><b>{{ operation.startDateTime|date('Hi') }} {{ tz }}</b></div>
+    {% if operation.endDateTime %}
+      <div class="fact"><small>Estimated End</small><b>{{ operation.endDateTime|date('Hi') }} {{ tz }}</b></div>
+    {% endif %}
+    {% if operation.location %}<div class="fact"><small>Location</small><b>{{ operation.location }}</b></div>{% endif %}
+    {% if operation.unit %}<div class="fact"><small>Unit</small><b>{{ operation.unit.name }}</b></div>{% endif %}
+    {% if server %}
+      <div class="fact">
+        <small>Server</small>
+        <b>{{ server.name }}</b>
+        {% if serverInfo %}
+          <div class="on mono">Online &bull; {{ serverInfo.players }}/{{ serverInfo.maxPlayers }} players</div>
+        {% else %}
+          <div class="off mono">No answer</div>
+        {% endif %}
+      </div>
+    {% endif %}
+    <div class="fact"><small>RSVPs</small><b>{{ attending }} attending{% if maybe %} &bull; {{ maybe }} maybe{% endif %}</b></div>
+    {% if showCountdown %}
+      <div class="fact countdown"><small>T-Minus</small><b id="ops-countdown" data-target="{{ operation.startDateTime|date('c') }}">--d --h --m --s</b></div>
+    {% endif %}
+  </div>
+
+  <nav class="ops-nav">
+    {% if hasOpord %}<a href="#opord">OPORD</a>{% endif %}
+    {% if timeline %}<a href="#timeline">Timeline</a>{% endif %}
+    {% if taskOrg %}<a href="#taskorg">Task Org</a>{% endif %}
+    {% if mods %}<a href="#modpack">Mod List</a>{% endif %}
+    {% if comms %}<a href="#comms">Comms</a>{% endif %}
+    {% if roe %}<a href="#roe">ROE</a>{% endif %}
+    {% if checklist %}<a href="#prep">Pre-Op</a>{% endif %}
+  </nav>
+
+  {% if preview %}
+    <div class="callout" style="margin-top:16px"><b>Preview:</b> this page is not published yet, so only staff can see its extra sections.</div>
+  {% endif %}
+
+  <div class="ops-grid">
+
+    <div class="ops-main">
+
+      {% if hasOpord %}
+        <section class="panel" id="opord">
+          <div class="panel-head"><h2>Operation Order (OPORD)</h2>{% if orderNumber %}<span>{{ orderNumber }}</span>{% endif %}</div>
+          <div class="panel-body para-body">
+            {% if briefing %}
+              <h4>Mission &mdash; {{ briefing.missionName }}</h4>
+              {{ briefing.taskPurpose|rich }}
+              {% if briefing.objectiveList %}
+                <h4>Objectives</h4>
+                <ol>
+                  {% for objective in briefing.objectiveList %}<li>{{ objective }}</li>{% endfor %}
+                </ol>
+              {% endif %}
+            {% endif %}
+            {% if operation.content %}
+              {% if briefing %}<h4>Operation Order</h4>{% endif %}
+              {{ operation.content|rich }}
+            {% endif %}
+          </div>
+        </section>
+      {% endif %}
+
+      {% if timeline %}
+        <section class="panel" id="timeline">
+          <div class="panel-head"><h2>Operation Timeline</h2><span>All times {{ tz }}</span></div>
+          <div class="panel-body">
+            <ul class="timeline">
+              {% for row in timeline %}
+                <li><time>{{ row[0] }}</time><strong>{{ row[1] }}</strong>{% if row[2] %}<span>{{ row[2] }}</span>{% endif %}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </section>
+      {% endif %}
+
+      {% if taskOrg %}
+        <section class="panel" id="taskorg">
+          <div class="panel-head"><h2>Task Organization</h2><span>Order of Battle</span></div>
+          <div class="panel-body">
+            <div class="org">
+              {% for element in taskOrg %}
+                <div class="elem">
+                  <h4>{{ element.name }}</h4>{% if element.subtitle %}<small>{{ element.subtitle }}</small>{% endif %}
+                  {% if element.rows %}
+                    <ul>{% for row in element.rows %}<li>{{ row[0] }}{% if row[1] %} <span>{{ row[1] }}</span>{% endif %}</li>{% endfor %}</ul>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </section>
+      {% endif %}
+
+      {% if mods or presetUrl or steamUrl %}
+        <section class="panel" id="modpack">
+          <div class="panel-head"><h2>Mod List &amp; Mod-Pack</h2><span>Required for all personnel</span></div>
+          <div class="panel-body">
+
+            {% if presetUrl or steamUrl %}
+              <div class="modpack">
+                <div>
+                  <h3>Mod-Pack &mdash; {{ operation.title }}</h3>
+                  <p>{{ mods|length }} mods{% if server %} &bull; {{ server.name }}{% endif %}</p>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                  {% if presetUrl %}
+                    <a class="btn btn-primary" href="{{ presetUrl }}" download>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
+                      Download Preset
+                    </a>
+                  {% endif %}
+                  {% if steamUrl %}<a class="btn" href="{{ steamUrl }}" target="_blank" rel="noopener noreferrer">Steam Collection</a>{% endif %}
+                </div>
+              </div>
+            {% endif %}
+
+            {% if mods %}
+              <div class="modbar">
+                <input type="search" id="ops-modsearch" placeholder="Search mods..." aria-label="Search mods">
+              </div>
+              <div class="tbl-wrap">
+                <table id="ops-modtable">
+                  <thead><tr><th>#</th><th>Mod</th><th>Version</th><th></th></tr></thead>
+                  <tbody>
+                    {% for mod in mods %}
+                      <tr>
+                        <td class="mono">{{ '%02d'|format(loop.index) }}</td>
+                        <td>{{ mod.name }}</td>
+                        <td class="mono">{{ mod.installedVersion }}</td>
+                        <td>
+                          {% if mod.workshopId %}
+                            <a class="dl" href="https://steamcommunity.com/sharedfiles/filedetails/?id={{ mod.workshopId|url_encode }}" target="_blank" rel="noopener noreferrer">Workshop &rarr;</a>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              <p style="margin-top:14px;color:var(--muted);font-size:.88rem">
+                <b>How to install:</b> Download the preset, open the Arma 3 Launcher &rarr; Mods &rarr; Preset &rarr; Import, then subscribe to any missing mods and let Steam finish downloading before launch. Mod mismatches will kick you from the server.
+              </p>
+            {% endif %}
+          </div>
+        </section>
+      {% endif %}
+
+    </div>
+
+    <aside class="ops-side">
+
+      <section class="panel" id="brief">
+        <div class="panel-head"><h2>Mission Data</h2></div>
+        <div class="panel-body">
+          <dl class="kv">
+            <dt>Type</dt><dd>{{ operation.type.label }}</dd>
+            {% if operation.location %}<dt>Location</dt><dd>{{ operation.location }}</dd>{% endif %}
+            {% if serverInfo and serverInfo.map %}<dt>Map</dt><dd>{{ serverInfo.map }}</dd>{% endif %}
+            {% if operation.endDateTime %}
+              <dt>Duration</dt><dd>~{{ ((operation.endDateTime.timestamp - operation.startDateTime.timestamp) / 3600)|round(1) }} hrs</dd>
+            {% endif %}
+            {% for row in missionData %}<dt>{{ row[0] }}</dt><dd>{{ row[1] }}</dd>{% endfor %}
+          </dl>
+        </div>
+      </section>
+
+      {% if comms %}
+        <section class="panel" id="comms">
+          <div class="panel-head"><h2>Comms Plan</h2></div>
+          <div class="panel-body" style="padding-left:20px;padding-right:12px">
+            <div class="tbl-wrap"><table>
+              <thead><tr><th>Net</th><th>Ch</th><th>Freq</th></tr></thead>
+              <tbody>
+                {% for row in comms %}
+                  <tr><td>{{ row[0] }}</td><td class="mono">{{ row[1] }}</td><td class="mono">{{ row[2] }}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table></div>
+          </div>
+        </section>
+      {% endif %}
+
+      {% if roe %}
+        <section class="panel" id="roe">
+          <div class="panel-head"><h2>Rules of Engagement</h2></div>
+          <div class="panel-body">
+            <ul style="margin:0;padding-left:1.2em">
+              {% for line in roe %}<li>{{ line }}</li>{% endfor %}
+            </ul>
+          </div>
+        </section>
+      {% endif %}
+
+      {% if checklist %}
+        <section class="panel" id="prep">
+          <div class="panel-head"><h2>Pre-Op Checklist</h2></div>
+          <div class="panel-body">
+            <ul class="checklist">
+              {% for line in checklist %}<li>{{ line }}</li>{% endfor %}
+            </ul>
+          </div>
+        </section>
+      {% endif %}
+
+      {% if quickLinks %}
+        <section class="panel">
+          <div class="panel-head"><h2>Quick Links</h2></div>
+          <div class="panel-body">
+            <div class="links">
+              {% for link in quickLinks %}<a href="{{ link.url }}"{% if link.url starts with 'http' %} rel="noopener noreferrer"{% endif %}>{{ link.label }}</a>{% endfor %}
+            </div>
+          </div>
+        </section>
+      {% endif %}
+
+    </aside>
+  </div>
+
+  <div class="foot">Stay sharp &bull; Stay switched on &bull; Complete the mission</div>
+</div>
+
+<script>
+(function(){
+  var root=document.querySelector('.ops'); if(!root) return;
+
+  // Countdown to the operation's start
+  var el=root.querySelector('#ops-countdown');
+  if(el){
+    var t=new Date(el.getAttribute('data-target')).getTime();
+    (function tick(){
+      var d=t-Date.now();
+      if(isNaN(t)){return;}
+      if(d<=0){el.textContent='H-HOUR: LIVE';return;}
+      var s=Math.floor(d/1000),D=Math.floor(s/86400),H=Math.floor(s%86400/3600),M=Math.floor(s%3600/60),S=s%60;
+      el.textContent=D+'d '+('0'+H).slice(-2)+'h '+('0'+M).slice(-2)+'m '+('0'+S).slice(-2)+'s';
+      setTimeout(tick,1000);
+    })();
+  }
+
+  // Mod search
+  var rows=root.querySelectorAll('#ops-modtable tbody tr'),
+      input=root.querySelector('#ops-modsearch');
+  if(input) input.addEventListener('input',function(){
+    var q=(input.value||'').toLowerCase();
+    rows.forEach(function(r){ r.style.display=r.textContent.toLowerCase().indexOf(q)>-1?'':'none'; });
+  });
+})();
+</script>

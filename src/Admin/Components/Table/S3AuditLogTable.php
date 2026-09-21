@@ -14,6 +14,7 @@ use MajesticDev\CommandNetS3\Entity\Mission;
 use MajesticDev\CommandNetS3\Entity\MissionFeedback;
 use MajesticDev\CommandNetS3\Entity\MissionKitApproval;
 use MajesticDev\CommandNetS3\Entity\MissionVersion;
+use MajesticDev\CommandNetS3\Entity\OperationPage;
 use MajesticDev\CommandNetS3\Entity\ServerMod;
 use MajesticDev\CommandNetS3\Entity\Sop;
 use MajesticDev\CommandNetS3\Entity\SopVersion;
@@ -39,7 +40,7 @@ class S3AuditLogTable extends AbstractDoctrineTable
     /**
      * Add new auditable S3 entities here so they show up in this view.
      */
-    public const AUDITED_ENTITIES =[Briefing::class, Sop::class, SopVersion::class, ZeusAsset::class, MissionKitApproval::class, GameServer::class, ServerMod::class, Mission::class, MissionVersion::class, MissionFeedback::class];
+    public const AUDITED_ENTITIES =[Briefing::class, Sop::class, SopVersion::class, ZeusAsset::class, MissionKitApproval::class, GameServer::class, ServerMod::class, Mission::class, MissionVersion::class, MissionFeedback::class, OperationPage::class];
 
     public function __construct(
         private readonly CoreRuntime $coreRuntime,

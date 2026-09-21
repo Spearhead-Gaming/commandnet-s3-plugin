@@ -26,6 +26,7 @@ class CommandNetS3AdminMenuBuilder implements AdminMenuBuilderInterface
             'pages' => [
                 ['Briefings', 'forumify_admin_command_net_s3_briefings_list', 'command-net-s3.admin.briefing.view'],
                 ['Zeus Assets', 'forumify_admin_command_net_s3_zeus_assets_list', 'command-net-s3.admin.zeus_asset.view'],
+                ['Operation Pages', 'forumify_admin_command_net_s3_operation_pages_list', 'command-net-s3.admin.operation_page.view'],
                 ['Live Notes', 'forumify_admin_command_net_s3_live_notes', 'command-net-s3.admin.live_notes.view'],
             ],
         ],

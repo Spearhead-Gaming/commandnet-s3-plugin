@@ -42,6 +42,7 @@ class CommandNetS3Plugin extends AbstractForumifyPlugin
                 'server' => ['view', 'manage'],
                 'mission' => ['view', 'manage', 'manage_all'],
                 'live_notes' => ['view', 'manage'],
+                'operation_page' => ['view', 'manage'],
                 'audit_log' => ['view'],
                 'discord' => ['manage'],
             ],
@@ -49,6 +50,7 @@ class CommandNetS3Plugin extends AbstractForumifyPlugin
             'sop' => ['view', 'acknowledge'],
             'mission' => ['feedback'],
             'dashboard' => ['view'],
+            'operation_info' => ['view'],
         ];
     }
 

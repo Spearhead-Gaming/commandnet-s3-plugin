@@ -19,12 +19,14 @@ class S3PagePayloadType extends AbstractType
     /** Page label => route. */
     public const array PAGES = [
         'Dashboard' => 'command_net_s3_dashboard',
+        'Current Operation' => 'command_net_s3_operation_current',
         'SOP Library' => 'command_net_s3_sop_list',
     ];
 
     /** Route => permission a viewer needs for the link to be worth showing. */
     public const array PERMISSIONS = [
         'command_net_s3_dashboard' => 'command-net-s3.dashboard.view',
+        'command_net_s3_operation_current' => 'command-net-s3.operation_info.view',
         'command_net_s3_sop_list' => 'command-net-s3.sop.view',
     ];
 
