@@ -58,16 +58,24 @@ All three phases of the spec are built.
 | 3 | Mod / addon version tracker | Built, versions entered by hand |
 | Extra | S3 dashboard and site menu item | Built |
 | Extra | Operation information page | Built, extra sections typed as one entry per line |
+| Extra | Mission mod lists and generated launcher preset | Built, typed or from an uploaded launcher export |
 
 Nothing here has automated tests. It has been checked statically (container, Twig and
 syntax lint, schema drift) plus targeted runs of the riskiest logic: the server query
 against a local fake server, the mission file storage (name generation, refused extensions,
-path traversal), version comparison, the class-name parser, and the operation page's text
-parser and template (rendered against hostile input under strict variable checking). In a
-browser, the mission
-flow has been run by hand: creating a mission, uploading three versions (200 KB, 1.5 MB and
-5 MB, with the stored sizes matching exactly) and downloading one. **The other pages have
-not been checked with real data**, so do that with some test data before relying on them.
+path traversal), version comparison, the class-name parser, the operation page's text
+parser and template (rendered against hostile input under strict variable checking), and the
+mod list parser and preset generator, including against a real 70-mod Arma 3 Launcher export.
+
+In a browser, two flows have been run by hand. The mission flow: creating a mission,
+uploading three versions (200 KB, 1.5 MB and 5 MB, with the stored sizes matching exactly)
+and downloading one. And the mod list flow, with mock data: creating a mission with the real
+launcher export attached, then checking the mission page, the generated download and the
+operation information page; editing the list by typing it (a DLC and a local mod included);
+the two error paths (a bad typed line, a file that isn't a preset); an operation with no
+mission falling back to its server's mods; and creating an Operation Page in the admin.
+**The other pages have not been checked with real data**, so do that with some test data
+before relying on them.
 
 ## Modules
 
@@ -162,6 +170,17 @@ retrievable.
 - Ownership: any Mission Dev with `mission.manage` can create a mission and becomes its
   owner. Only the owner, or someone with `mission.manage_all` (leads), can upload versions
   or resolve feedback. Editing or deleting the mission record itself is leads only.
+- **Mod list**: every mission has one list of mods and DLC, set two ways. Type it, one line
+  per mod as `Name | Workshop link or ID` (start a DLC line with `DLC:`; a line with only a
+  name is a local mod that players can't download), or upload the preset exported from the
+  Arma 3 Launcher (Mods, Preset, Export), whose mods and DLC are read out of the HTML. Saving
+  replaces the list, on the mission form or on **Edit mod list** (open to the owner and
+  leads), where the text box starts from the stored list. A bad line, or a file with no
+  mods in it, is a form error and leaves the stored list alone.
+- **Generated download**: players get a launcher preset built fresh from the list, from the
+  mission page and the operation page. The uploaded file is only read for names and Steam
+  ids, with external entities and network access off; it is never stored or served back, so
+  an uploaded page can't be redistributed. Limits: 2 MB and 500 mods.
 
 ### Live notes
 
@@ -215,8 +234,13 @@ A live page for an operation, ported from the community's static operations-page
   (or says there isn't one). `/operations/{id}/info` shows any operation. Needs
   `operation_info.view`.
 - **Read live on every view**, so it never goes stale: title, status, dates, location, unit,
-  RSVP counts, the OPORD body, the briefing's mission and objectives, the countdown, the mods
-  tracked on the chosen server, and that server's online state, player count and map.
+  RSVP counts, the OPORD body, the briefing's mission and objectives, the countdown, and the
+  chosen server's online state, player count and map.
+- **The mod list** is the one on the mission tied to the operation (the newest, if several),
+  and its "Download Mod-Pack" button gives the generated launcher preset. With no mission
+  list, it falls back to the mods tracked on the chosen server, shown with their versions.
+  DLC and local mods are marked, and the Version column appears only when a row has one. A
+  preset link typed on the Operation Page overrides the generated download.
 - **Stored on an Operation Page**, edited under **Zeus / GM → Operation Pages**: order number,
   one-line summary, server, preset and Steam collection links, and text boxes for the
   timeline, task organization, mission data, comms plan, ROE, pre-op checklist and quick
@@ -257,20 +281,30 @@ display name, "Command Net S3"), declared in `CommandNetS3Plugin::getPermissions
 
 `s3_briefing`, `s3_sop`, `s3_sop_version`, `s3_sop_acknowledgement`, `s3_zeus_asset`,
 `s3_mission_kit_approval`, `s3_game_server`, `s3_server_mod`, `s3_mission`,
-`s3_mission_version`, `s3_mission_feedback`, `s3_mission_note`, `s3_operation_page`. The
+`s3_mission_version`, `s3_mission_feedback`, `s3_mission_note`, `s3_operation_page`,
+`s3_mission_mod`. The
 audit log uses Forumify's
 own `audit_log` table, and Discord settings are stored under the `command_net_s3.discord`
 setting. Uploaded mission files are on disk in `var/s3-missions/`, not in the database.
 
 ## Known gaps
 
-- **Mostly not exercised in a browser.** Only the mission create, upload and download flow
-  has been run by hand. Not checked with real data: submitting and resolving playtest
+- **The generated preset is unverified in the real launcher.** It follows the format of a
+  real export and reads back to the same list, but nobody has confirmed the Arma 3 Launcher
+  imports it. Try importing a downloaded preset before relying on it.
+- **The mod list belongs to the mission, not to one version**, and changes to it are not
+  audited (the list is replaced as a whole). Mods have no per-mod version there; versions
+  only appear on the server-mod fallback.
+- **Times on the operation page follow the site's timezone**, but the timeline and other
+  typed sections are literal text. Type the timeline in the timezone the page shows.
+- **Mostly not exercised in a browser.** Only the mission flow and the mod list flow above
+  have been run by hand. Not checked with real data: submitting and resolving playtest
   feedback, the browser-side refusal of a disallowed upload (the storage layer's refusals
   are tested), the non-owner permission checks, Live Notes, Server Status, briefings, the
   SOP library, the dashboard, the categorized admin menu, the Menu Builder "S3" item type,
-  the operation information page and the rest. The loadout check's Approved path hasn't been
-  tried against real equipment, and no Discord message has been sent.
+  the operation page as a normal member without staff rights, and the rest. The loadout
+  check's Approved path hasn't been tried against real equipment, and no Discord message has
+  been sent.
 - **Briefing map image upload** from the spec isn't built.
 - **"Slotted" means an Attending or Maybe RSVP.** Change `BriefingController::isSlotted()`
   if you gain a real slotting concept.
