@@ -1,0 +1,13 @@
+{% extends '@Forumify/admin/base.html.twig' %}
+
+{% block title_page %}Discord Announcements{% endblock %}
+
+{% block body %}
+    <h1 class="mb-1">Discord Announcements</h1>
+    <p class="alert-info mb-4">
+        Announcements are posted by the Discord plugin's bot to each server's announcements channel. Set the bot and
+        those channels up under the Discord plugin's connections; nothing is posted until the bot is online and a
+        connection has an announcements channel.
+    </p>
+    {% include '@Forumify/admin/components/simple_form.html.twig' with { form: form } %}
+{% endblock %}

@@ -11,3 +11,5 @@ services:
             - '../src/**/DataFixture/'
             - '../src/**/DependencyInjection/'
             - '../src/**/Entity/'
+            # Needs the optional Discord plugin, so config/discord.php loads it only when present.
+            - '../src/Discord/'

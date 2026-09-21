@@ -39,6 +39,9 @@ class CommandNetS3AdminMenuBuilder implements AdminMenuBuilderInterface
             new MenuItem('Kit Approvals', $url('forumify_admin_command_net_s3_kit_approvals_list'), [
                 'permission' => 'command-net-s3.admin.loadout.view',
             ]),
+            new MenuItem('Discord Announcements', $url('forumify_admin_command_net_s3_discord_settings'), [
+                'permission' => 'command-net-s3.admin.discord.manage',
+            ]),
             new MenuItem('Audit Log', $url('forumify_admin_command_net_s3_audit_log'), [
                 'permission' => 'command-net-s3.admin.audit_log.view',
             ]),

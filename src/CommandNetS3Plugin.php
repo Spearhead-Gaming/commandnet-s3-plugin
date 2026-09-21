@@ -6,6 +6,9 @@ namespace MajesticDev\CommandNetS3;
 
 use Forumify\Plugin\AbstractForumifyPlugin;
 use Forumify\Plugin\PluginMetadata;
+use MajesticDev\Discord\CommandNetDiscordPlugin;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 /**
  * The entry point forumify uses to recognise this package as a plugin.
@@ -37,9 +40,22 @@ class CommandNetS3Plugin extends AbstractForumifyPlugin
                 'zeus_asset' => ['view', 'manage'],
                 'loadout' => ['view', 'manage'],
                 'audit_log' => ['view'],
+                'discord' => ['manage'],
             ],
             'briefing' => ['view'],
             'sop' => ['view', 'acknowledge'],
         ];
+    }
+
+    public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
+    {
+        parent::loadExtension($config, $container, $builder);
+
+        // The Discord plugin is optional; the announcers only exist when it is installed.
+        /** @var array<string, class-string> $bundles */
+        $bundles = $builder->getParameter('kernel.bundles');
+        if (in_array(CommandNetDiscordPlugin::class, $bundles, true)) {
+            $container->import($this->getPath() . '/config/discord.php');
+        }
     }
 }
