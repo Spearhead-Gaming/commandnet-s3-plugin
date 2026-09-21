@@ -60,8 +60,10 @@ All three phases of the spec are built.
 Nothing here has automated tests. It has been checked statically (container, Twig and
 syntax lint, schema drift) plus targeted runs of the riskiest logic: the server query
 against a local fake server, the mission file storage (name generation, refused extensions,
-path traversal), version comparison and the class-name parser. **No page has been opened
-in a browser with real data**, so do that with some test data before relying on it.
+path traversal), version comparison and the class-name parser. In a browser, the mission
+flow has been run by hand: creating a mission, uploading three versions (200 KB, 1.5 MB and
+5 MB, with the stored sizes matching exactly) and downloading one. **The other pages have
+not been checked with real data**, so do that with some test data before relying on them.
 
 ## Modules
 
@@ -208,9 +210,12 @@ setting. Uploaded mission files are on disk in `var/s3-missions/`, not in the da
 
 ## Known gaps
 
-- **Not exercised in a browser.** No page here has been loaded with real data, the loadout
-  check's Approved path hasn't been tried against real equipment, and no Discord message has
-  been sent.
+- **Mostly not exercised in a browser.** Only the mission create, upload and download flow
+  has been run by hand. Not checked with real data: submitting and resolving playtest
+  feedback, the browser-side refusal of a disallowed upload (the storage layer's refusals
+  are tested), the non-owner permission checks, Live Notes, Server Status, briefings, the
+  SOP library and the rest. The loadout check's Approved path hasn't been tried against real
+  equipment, and no Discord message has been sent.
 - **Briefing map image upload** from the spec isn't built.
 - **"Slotted" means an Attending or Maybe RSVP.** Change `BriefingController::isSlotted()`
   if you gain a real slotting concept.
@@ -240,6 +245,10 @@ setting. Uploaded mission files are on disk in `var/s3-missions/`, not in the da
 make quality       # phpcs + phpstan (needs composer install)
 make quality-fix   # phpcbf
 ```
+
+The dev server config in `.claude/launch.json` starts PHP with 4 workers and 300 MB upload
+limits. Plain `php -S` is single-threaded, and in dev mode a page takes seconds, so its own
+health checks can starve it; PHP's default 2 MB upload limit also rejects real missions.
 
 Migrations are generated with `doctrine:migrations:diff --namespace=CommandNetS3PluginMigrations`.
 If several Claude or dev sessions share one Forumify install, generate and run migrations from
