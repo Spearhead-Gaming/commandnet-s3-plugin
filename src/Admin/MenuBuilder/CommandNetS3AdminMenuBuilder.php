@@ -30,6 +30,9 @@ class CommandNetS3AdminMenuBuilder implements AdminMenuBuilderInterface
             new MenuItem('SOP Versions', $url('forumify_admin_command_net_s3_sop_versions_list'), [
                 'permission' => 'command-net-s3.admin.sop.view',
             ]),
+            new MenuItem('Zeus Assets', $url('forumify_admin_command_net_s3_zeus_assets_list'), [
+                'permission' => 'command-net-s3.admin.zeus_asset.view',
+            ]),
             new MenuItem('Audit Log', $url('forumify_admin_command_net_s3_audit_log'), [
                 'permission' => 'command-net-s3.admin.audit_log.view',
             ]),

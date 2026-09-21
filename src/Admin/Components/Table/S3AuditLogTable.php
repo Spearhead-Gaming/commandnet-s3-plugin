@@ -11,6 +11,7 @@ use Forumify\Core\Twig\Extension\CoreRuntime;
 use MajesticDev\CommandNetS3\Entity\Briefing;
 use MajesticDev\CommandNetS3\Entity\Sop;
 use MajesticDev\CommandNetS3\Entity\SopVersion;
+use MajesticDev\CommandNetS3\Entity\ZeusAsset;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Uid\Ulid;
@@ -32,7 +33,7 @@ class S3AuditLogTable extends AbstractDoctrineTable
     /**
      * Add new auditable S3 entities here so they show up in this view.
      */
-    private const AUDITED_ENTITIES = [Briefing::class, Sop::class, SopVersion::class];
+    private const AUDITED_ENTITIES = [Briefing::class, Sop::class, SopVersion::class, ZeusAsset::class];
 
     public function __construct(
         private readonly CoreRuntime $coreRuntime,
