@@ -1,0 +1,153 @@
+{% extends '@Forumify/frontend/base.html.twig' %}
+
+{% block title_page %}S3 Dashboard{% endblock %}
+
+{% block body %}
+    <h1 class="mb-4">S3 Dashboard</h1>
+
+    <div class="grid gap-4">
+        <div class="col-xs-12 col-md-8 flex flex-col gap-4">
+            {% if operations is not null %}
+                <div class="card">
+                    <div class="card-title flex items-center justify-between gap-2">
+                        <span>Upcoming operations</span>
+                        <a class="btn-outlined btn-small" href="{{ path('forumify_admin_command_net_s3_briefings_create') }}">New briefing</a>
+                    </div>
+                    {% if operations is empty %}
+                        <div class="card-body"><p class="text-small">No upcoming operations.</p></div>
+                    {% else %}
+                        <ul class="card-body p-0">
+                            {% for row in operations %}
+                                <li class="p-2 pr-4 pl-4 flex items-center justify-between gap-2{% if not loop.last %} border-b{% endif %}">
+                                    <div>
+                                        <a class="text-bold" href="{{ path('command_net_operation_detail', { id: row.operation.id }) }}">{{ row.operation.title }}</a>
+                                        <span class="text-small">{{ row.operation.startDateTime|format_date }}</span>
+                                    </div>
+                                    {% if row.briefing %}
+                                        <a href="{{ path('command_net_s3_briefing', { id: row.operation.id }) }}"
+                                           class="tag {{ row.briefing.status.value == 'draft' ? 'tag-error' : '' }}">
+                                            Briefing: {{ row.briefing.status.label }}
+                                        </a>
+                                    {% else %}
+                                        <span class="tag tag-error">No briefing</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if feedback is not null %}
+                <div class="card">
+                    <div class="card-title flex items-center justify-between gap-2">
+                        <span>Open playtest feedback ({{ feedback.count }})</span>
+                        <a class="btn-outlined btn-small" href="{{ path('forumify_admin_command_net_s3_missions_list') }}">Missions</a>
+                    </div>
+                    {% if feedback.latest is empty %}
+                        <div class="card-body"><p class="text-small">Nothing waiting.</p></div>
+                    {% else %}
+                        <ul class="card-body p-0">
+                            {% for item in feedback.latest %}
+                                <li class="p-2 pr-4 pl-4{% if not loop.last %} border-b{% endif %}">
+                                    <span class="tag">{{ item.kind.label }}</span>
+                                    <a href="{{ path('forumify_admin_command_net_s3_mission', { id: item.version.mission.id }) }}">
+                                        {{ item.version.mission.name }} {{ item.version.label }}
+                                    </a>
+                                    <span class="text-small">{{ item.createdAt|format_date }}</span>
+                                    <p class="text-small mb-0">{{ item.description|length > 140 ? item.description|slice(0, 140) ~ '…' : item.description }}</p>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if activity is not null %}
+                <div class="card">
+                    <div class="card-title flex items-center justify-between gap-2">
+                        <span>Recent S3 activity</span>
+                        <a class="btn-outlined btn-small" href="{{ path('forumify_admin_command_net_s3_audit_log') }}">Audit log</a>
+                    </div>
+                    {% if activity is empty %}
+                        <div class="card-body"><p class="text-small">Nothing recorded yet.</p></div>
+                    {% else %}
+                        <ul class="card-body p-0">
+                            {% for entry in activity %}
+                                <li class="p-2 pr-4 pl-4 flex items-center justify-between gap-2{% if not loop.last %} border-b{% endif %}">
+                                    <span>
+                                        <span class="text-bold">{{ entry.user ? entry.user.displayName : 'System' }}</span>
+                                        {{ entry.action }}
+                                        {{ entry.targetEntityClass|split('\\')|last|lower }}
+                                        {{ entry.targetName }}
+                                    </span>
+                                    <span class="text-small">{{ entry.uid.dateTime|format_date(true) }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-xs-12 col-md-4 flex flex-col gap-4">
+            {% if pendingSops is not null %}
+                <div class="card">
+                    <div class="card-title">Needs your acknowledgment</div>
+                    {% if pendingSops is empty %}
+                        <div class="card-body"><p class="text-small">You are up to date.</p></div>
+                    {% else %}
+                        <ul class="card-body p-0">
+                            {% for sop in pendingSops %}
+                                <li class="p-2 pr-4 pl-4{% if not loop.last %} border-b{% endif %}">
+                                    <a href="{{ path('command_net_s3_sop_show', { id: sop.id }) }}">{{ sop.title }}</a>
+                                    <span class="text-small">v{{ sop.currentVersion.label }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if outdatedMods is not null %}
+                <div class="card">
+                    <div class="card-title flex items-center justify-between gap-2">
+                        <span>Out-of-date mods ({{ outdatedMods|length }})</span>
+                        <a class="btn-outlined btn-small" href="{{ path('forumify_admin_command_net_s3_server_status') }}">Servers</a>
+                    </div>
+                    {% if outdatedMods is empty %}
+                        <div class="card-body"><p class="text-small">Every tracked mod is current.</p></div>
+                    {% else %}
+                        <ul class="card-body p-0">
+                            {% for mod in outdatedMods %}
+                                <li class="p-2 pr-4 pl-4{% if not loop.last %} border-b{% endif %}">
+                                    <span class="text-bold">{{ mod.name }}</span>
+                                    <span class="text-small">{{ mod.server.name }}: {{ mod.installedVersion }} (modpack {{ mod.modpackVersion }})</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-title">Tools</div>
+                <ul class="card-body p-0">
+                    {% set tools = [
+                        { label: 'Live Notes', route: 'forumify_admin_command_net_s3_live_notes', permission: 'command-net-s3.admin.live_notes.view' },
+                        { label: 'Loadout Check', route: 'forumify_admin_command_net_s3_loadout_check', permission: 'command-net-s3.admin.loadout.view' },
+                        { label: 'Missions', route: 'forumify_admin_command_net_s3_missions_list', permission: 'command-net-s3.admin.mission.view' },
+                        { label: 'Zeus Assets', route: 'forumify_admin_command_net_s3_zeus_assets_list', permission: 'command-net-s3.admin.zeus_asset.view' },
+                        { label: 'SOP Library', route: 'command_net_s3_sop_list', permission: 'command-net-s3.sop.view' },
+                        { label: 'Server Status', route: 'forumify_admin_command_net_s3_server_status', permission: 'command-net-s3.admin.server.view' },
+                    ] %}
+                    {% for tool in tools %}
+                        {% if is_granted(tool.permission) %}
+                            <li class="p-2 pr-4 pl-4 border-b"><a href="{{ path(tool.route) }}">{{ tool.label }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+{% endblock %}

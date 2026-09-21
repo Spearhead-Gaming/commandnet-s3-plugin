@@ -48,6 +48,7 @@ class CommandNetS3Plugin extends AbstractForumifyPlugin
             'briefing' => ['view'],
             'sop' => ['view', 'acknowledge'],
             'mission' => ['feedback'],
+            'dashboard' => ['view'],
         ];
     }
 
