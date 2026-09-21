@@ -1,0 +1,12 @@
+{% extends '@Forumify/admin/base.html.twig' %}
+
+{% block title_page %}S3 Audit Log{% endblock %}
+
+{% block body %}
+    <h1>S3 Audit Log</h1>
+    <p class="text-small mb-4">
+        Changes to briefings and SOP documents, recorded automatically with who made them. Entries are read-only.
+    </p>
+    <div class="alert-info mb-4">{{ 'admin.audit_logs.retention_warning'|trans }}</div>
+    {{ component('S3AuditLogTable') }}
+{% endblock %}

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MajesticDev\CommandNetS3\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Forumify\Core\Entity\AuditableEntityInterface;
 use Forumify\Core\Entity\IdentifiableEntityTrait;
 use Forumify\Core\Entity\TimestampableEntityTrait;
 use MajesticDev\CommandNetS3\Repository\SopVersionRepository;
@@ -14,7 +15,7 @@ use MajesticDev\CommandNetS3\Repository\SopVersionRepository;
  */
 #[ORM\Entity(SopVersionRepository::class)]
 #[ORM\Table(name: 's3_sop_version')]
-class SopVersion
+class SopVersion implements AuditableEntityInterface
 {
     use IdentifiableEntityTrait;
     use TimestampableEntityTrait;
@@ -73,5 +74,15 @@ class SopVersion
     public function setChangelog(?string $changelog): void
     {
         $this->changelog = $changelog;
+    }
+
+    public function getIdentifierForAudit(): string
+    {
+        return (string)$this->getId();
+    }
+
+    public function getNameForAudit(): string
+    {
+        return $this->sop->getTitle() . ' ' . $this->label;
     }
 }

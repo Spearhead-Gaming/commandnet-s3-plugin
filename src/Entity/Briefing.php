@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MajesticDev\CommandNetS3\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Forumify\Core\Entity\AuditableEntityInterface;
 use Forumify\Core\Entity\IdentifiableEntityTrait;
 use MajesticDev\CommandNet\Entity\Operation;
 use MajesticDev\CommandNetS3\Entity\Enum\BriefingStatus;
@@ -17,7 +18,7 @@ use MajesticDev\CommandNetS3\Repository\BriefingRepository;
  */
 #[ORM\Entity(BriefingRepository::class)]
 #[ORM\Table(name: 's3_briefing')]
-class Briefing
+class Briefing implements AuditableEntityInterface
 {
     use IdentifiableEntityTrait;
 
@@ -98,5 +99,15 @@ class Briefing
     public function setStatus(BriefingStatus $status): void
     {
         $this->status = $status;
+    }
+
+    public function getIdentifierForAudit(): string
+    {
+        return (string)$this->getId();
+    }
+
+    public function getNameForAudit(): string
+    {
+        return $this->missionName;
     }
 }

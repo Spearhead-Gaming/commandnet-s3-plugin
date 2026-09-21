@@ -7,6 +7,7 @@ namespace MajesticDev\CommandNetS3\Entity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Forumify\Core\Entity\AuditableEntityInterface;
 use Forumify\Core\Entity\IdentifiableEntityTrait;
 use MajesticDev\CommandNetS3\Repository\SopRepository;
 
@@ -16,7 +17,7 @@ use MajesticDev\CommandNetS3\Repository\SopRepository;
  */
 #[ORM\Entity(SopRepository::class)]
 #[ORM\Table(name: 's3_sop')]
-class Sop
+class Sop implements AuditableEntityInterface
 {
     use IdentifiableEntityTrait;
 
@@ -71,6 +72,16 @@ class Sop
     public function getCurrentVersion(): ?SopVersion
     {
         return $this->versions->first() ?: null;
+    }
+
+    public function getIdentifierForAudit(): string
+    {
+        return (string)$this->getId();
+    }
+
+    public function getNameForAudit(): string
+    {
+        return $this->title;
     }
 
     public function __toString(): string
