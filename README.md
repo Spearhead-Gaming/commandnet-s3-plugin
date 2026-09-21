@@ -19,6 +19,8 @@ Built for a specific MILSIM community's Forumify install; not a general-purpose 
   Briefings hang off its `Operation`, and the loadout check reads its `Equipment`,
   `Position` and `Unit` data.
 - MySQL
+- A writable `var/` directory on the install: uploaded mission files are kept in
+  `var/s3-missions/`
 - Optional: [`commandnet-discord-plugin`](https://github.com/Spearhead-Gaming/commandnet-discord-plugin)
   for Discord announcements. Without it everything else works and the announcers simply
   aren't loaded.
@@ -39,7 +41,7 @@ bin/console doctrine:migrations:migrate
 
 ## Status
 
-Phases 1 and 2 of the spec are built. Phase 3 has not been started.
+All three phases of the spec are built.
 
 | Phase | Module | State |
 | --- | --- | --- |
@@ -49,15 +51,17 @@ Phases 1 and 2 of the spec are built. Phase 3 has not been started.
 | 2 | Zeus asset library | Built, admin only |
 | 2 | Loadout tracker | Built |
 | 2 | Discord announcements | Built, off by default |
-| 3 | Live mission notes / AAR quick-capture | Not started |
-| 3 | Mission upload & version repository | Not started, blocked on where mission files live |
-| 3 | Mission testing / feedback log | Not started |
-| 3 | Server status / performance dashboard | Not started |
-| 3 | Mod / addon version tracker | Not started |
+| 3 | Live mission notes / AAR quick-capture | Built, the AAR draft is copy and paste |
+| 3 | Mission upload & version repository | Built, files in private local storage |
+| 3 | Mission testing / feedback log | Built |
+| 3 | Server status / performance dashboard | Built, name / map / mission / players / ping only |
+| 3 | Mod / addon version tracker | Built, versions entered by hand |
 
-Nothing here has automated tests, and it has only been checked statically (container,
-Twig and syntax lint, schema drift) plus a few targeted runs of the parsing logic. Open
-the admin pages with some test data before relying on it.
+Nothing here has automated tests. It has been checked statically (container, Twig and
+syntax lint, schema drift) plus targeted runs of the riskiest logic: the server query
+against a local fake server, the mission file storage (name generation, refused extensions,
+path traversal), version comparison and the class-name parser. **No page has been opened
+in a browser with real data**, so do that with some test data before relying on it.
 
 ## Modules
 
@@ -108,14 +112,16 @@ vehicles each Unit fields, and Equipment class names), so this adds only the mis
 
 ### Audit log
 
-Briefings, SOP documents and versions, Zeus assets and kit approvals implement Forumify's
+Briefings, SOP documents and versions, Zeus assets, kit approvals, game servers, server
+mods, missions, mission versions and mission feedback implement Forumify's
 `AuditableEntityInterface`, so Forumify itself records who created, changed or removed
-them and which fields changed. **Audit Log** is a read-only view of just those entries, so
+them and which fields changed. That is also the mod update history: every change to a
+mod's installed version is logged with who and when. **Audit Log** is a read-only view of just those entries, so
 S3 leadership can review S3 activity without access to the site-wide log.
 
 It does not record a reason, and kicks, bans and other game-server actions never touch the
-forum database, so they aren't logged. That needs the RCON work planned for Phase 3.
-Acknowledgements are not audited.
+forum database, so they aren't logged. That would need an RCON integration, which isn't
+built. Acknowledgements and live notes are not audited.
 
 ### Discord announcements
 
@@ -131,6 +137,45 @@ default** under **Discord Announcements**:
 A failed bot call is logged and never blocks saving, and `@` is neutralized in staff-entered
 text so a title can't ping a whole server.
 
+### Missions and playtest feedback
+
+Missions with uploaded, versioned files, so the exact build used in an operation stays
+retrievable.
+
+- Admin: **Missions**. A mission can be tied to an operation. Each version is a `.pbo`,
+  `.vt` or `.zip` (up to 256 MB, and also capped by your server's PHP upload limits) with a
+  label and notes, and stays downloadable.
+- Files are stored under `var/s3-missions/` with generated names, outside the web root, and
+  served only through a permission-checked download. Nothing a user types becomes a path.
+  `MissionStorage` is the only class that touches the disk, so moving to S3 or another
+  Flysystem storage is a swap of that one class.
+- Each version has an unguessable **feedback link** that a Mission Dev copies and shares.
+  Any member with `mission.feedback` can report a bug, balance issue or general feedback
+  through it. Missions are deliberately not listed for members, so upcoming ones can't be
+  browsed. The owner or a lead can mark feedback resolved or reopen it.
+- Ownership: any Mission Dev with `mission.manage` can create a mission and becomes its
+  owner. Only the owner, or someone with `mission.manage_all` (leads), can upload versions
+  or resolve feedback. Editing or deleting the mission record itself is leads only.
+
+### Live notes
+
+**Live Notes** lets a GM pick an operation and jot timestamped notes during it. Notes can
+only be added, so the record stays honest. Afterwards the page builds an after-action
+report draft from them, to copy into Command Net's AAR form. It is not a real prefill of
+that form, which would mean changing `commandnet-plugin`.
+
+### Server status and mod tracker
+
+- **Game Servers**: a host and Steam query port per server.
+- **Server Status**: asks each server live, over the Steam query protocol (A2S_INFO), whether
+  it is answering, its name, map, mission, player count and ping, plus how many of its
+  tracked mods are out of date. It cannot show uptime or the loaded mod list, and it isn't
+  RCON. Servers are queried one after another with a short timeout, so many offline servers
+  make the page slow.
+- **Server Mods**: the version installed on each server against the version in the client
+  modpack, flagged Out of date when the server is behind. Versions are entered by hand and
+  compared with `version_compare`, so 1.2.0 is correctly behind 1.10.0.
+
 ## Permissions
 
 Checked as `command-net-s3.<area>.<action>` (the prefix is slugged from the plugin's
@@ -144,14 +189,22 @@ display name, "Command Net S3"), declared in `CommandNetS3Plugin::getPermissions
 | `admin.loadout.view` / `.manage` | Use the Loadout Check and see / manage kit approvals |
 | `admin.audit_log.view` | The S3 audit log view |
 | `admin.discord.manage` | Turn Discord announcements on and off |
+| `admin.server.view` / `.manage` | See / manage game servers and mods; view Server Status |
+| `admin.mission.view` | See missions, versions and feedback; download files |
+| `admin.mission.manage` | Create missions; upload versions and resolve feedback on missions you own |
+| `admin.mission.manage_all` | Leads: edit or delete any mission, upload to or resolve on any |
+| `admin.live_notes.view` / `.manage` | See / add live mission notes |
 | `briefing.view` | The player-facing briefing page |
 | `sop.view` / `sop.acknowledge` | Read the SOP library / acknowledge a version |
+| `mission.feedback` | Submit playtest feedback through a shared feedback link |
 
 ## Tables
 
 `s3_briefing`, `s3_sop`, `s3_sop_version`, `s3_sop_acknowledgement`, `s3_zeus_asset`,
-`s3_mission_kit_approval`. The audit log uses Forumify's own `audit_log` table, and Discord
-settings are stored under the `command_net_s3.discord` setting.
+`s3_mission_kit_approval`, `s3_game_server`, `s3_server_mod`, `s3_mission`,
+`s3_mission_version`, `s3_mission_feedback`, `s3_mission_note`. The audit log uses Forumify's
+own `audit_log` table, and Discord settings are stored under the `command_net_s3.discord`
+setting. Uploaded mission files are on disk in `var/s3-missions/`, not in the database.
 
 ## Known gaps
 
@@ -169,7 +222,17 @@ settings are stored under the `command_net_s3.discord` setting.
 - **Promotions aren't announced on Discord.** That belongs to personnel management, outside
   this plugin's scope in the spec.
 - **No automated tests.**
-- **Mission file storage is undecided**, which blocks the Phase 3 mission repository.
+- **Deleting a mission leaves its files on disk.** The records go, the files in
+  `var/s3-missions/` stay, which also means an accidental delete doesn't lose a build.
+- **Mission uploads are limited by PHP** (`upload_max_filesize` and `post_max_size`), which
+  may be lower than the 256 MB the form allows.
+- **Back up `var/s3-missions/`** along with the database, since mission files aren't in it.
+- **The server query is basic:** no uptime, no loaded mod list, not RCON, and servers are
+  queried sequentially.
+- **Mod versions are entered by hand;** nothing reads them from the server.
+- **The AAR draft is copy and paste**, not a prefill of Command Net's AAR form.
+- **Live notes have no "assigned GM"** per operation, because Command Net doesn't model one.
+  Anyone with `live_notes.manage` can add notes to any operation.
 
 ## Development
 
