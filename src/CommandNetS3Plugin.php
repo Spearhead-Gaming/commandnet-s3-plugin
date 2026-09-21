@@ -35,6 +35,7 @@ class CommandNetS3Plugin extends AbstractForumifyPlugin
                 'briefing' => ['view', 'manage'],
                 'sop' => ['view', 'manage'],
                 'zeus_asset' => ['view', 'manage'],
+                'loadout' => ['view', 'manage'],
                 'audit_log' => ['view'],
             ],
             'briefing' => ['view'],

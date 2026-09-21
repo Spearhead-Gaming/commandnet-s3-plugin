@@ -9,6 +9,7 @@ use Forumify\Core\Component\Table\AbstractDoctrineTable;
 use Forumify\Core\Entity\AuditLog;
 use Forumify\Core\Twig\Extension\CoreRuntime;
 use MajesticDev\CommandNetS3\Entity\Briefing;
+use MajesticDev\CommandNetS3\Entity\MissionKitApproval;
 use MajesticDev\CommandNetS3\Entity\Sop;
 use MajesticDev\CommandNetS3\Entity\SopVersion;
 use MajesticDev\CommandNetS3\Entity\ZeusAsset;
@@ -33,7 +34,7 @@ class S3AuditLogTable extends AbstractDoctrineTable
     /**
      * Add new auditable S3 entities here so they show up in this view.
      */
-    private const AUDITED_ENTITIES = [Briefing::class, Sop::class, SopVersion::class, ZeusAsset::class];
+    private const AUDITED_ENTITIES = [Briefing::class, Sop::class, SopVersion::class, ZeusAsset::class, MissionKitApproval::class];
 
     public function __construct(
         private readonly CoreRuntime $coreRuntime,

@@ -1,0 +1,51 @@
+{% extends '@Forumify/admin/base.html.twig' %}
+
+{% block title_page %}Loadout Check{% endblock %}
+
+{% block body %}
+    <h1 class="mb-1">Loadout Check</h1>
+    <p class="text-small mb-4">
+        Paste a mission's kit list to see what is approved. Equipment counts as approved if a Command Net position may
+        use it, a unit fields it, or it has been approved for the chosen operation. Nothing is saved.
+    </p>
+
+    <div class="box mb-4">
+        {{ form_start(form) }}
+        {{ form_widget(form) }}
+        <div class="flex justify-center items-center gap-2">
+            <button type="submit" class="btn-primary">Check kit list</button>
+        </div>
+        {{ form_end(form) }}
+    </div>
+
+    {% if results is not null %}
+        {% if results is empty %}
+            <p>No class names found in that list.</p>
+        {% else %}
+            <p class="mb-2">
+                <strong>{{ counts.approved|default(0) }}</strong> approved,
+                <strong>{{ counts.not_authorized|default(0) }}</strong> not authorized,
+                <strong>{{ counts.unknown|default(0) }}</strong> not in the equipment list.
+                {% if counts.not_authorized is not defined and counts.unknown is not defined %}
+                    Everything on this list is approved.
+                {% endif %}
+            </p>
+            <div class="card">
+                <ul class="card-body p-0">
+                    {% for result in results %}
+                        <li class="p-2 pr-4 pl-4 flex items-center justify-between gap-2{% if not loop.last %} border-b{% endif %}">
+                            <div>
+                                <code>{{ result.classname }}</code>
+                                {% if result.equipment %}<span class="text-small">{{ result.equipment.name }}</span>{% endif %}
+                                {% if result.reasons is not empty %}
+                                    <p class="text-small mb-0">{{ result.reasons|join(', ') }}</p>
+                                {% endif %}
+                            </div>
+                            <span class="tag {{ result.status.value == 'approved' ? '' : 'tag-error' }}">{{ result.status.label }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+    {% endif %}
+{% endblock %}

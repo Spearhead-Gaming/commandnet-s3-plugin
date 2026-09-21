@@ -33,6 +33,12 @@ class CommandNetS3AdminMenuBuilder implements AdminMenuBuilderInterface
             new MenuItem('Zeus Assets', $url('forumify_admin_command_net_s3_zeus_assets_list'), [
                 'permission' => 'command-net-s3.admin.zeus_asset.view',
             ]),
+            new MenuItem('Loadout Check', $url('forumify_admin_command_net_s3_loadout_check'), [
+                'permission' => 'command-net-s3.admin.loadout.view',
+            ]),
+            new MenuItem('Kit Approvals', $url('forumify_admin_command_net_s3_kit_approvals_list'), [
+                'permission' => 'command-net-s3.admin.loadout.view',
+            ]),
             new MenuItem('Audit Log', $url('forumify_admin_command_net_s3_audit_log'), [
                 'permission' => 'command-net-s3.admin.audit_log.view',
             ]),
