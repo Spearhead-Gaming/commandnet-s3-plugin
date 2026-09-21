@@ -1,0 +1,16 @@
+{% extends '@Forumify/admin/base.html.twig' %}
+
+{% block title_page %}Upload a version{% endblock %}
+
+{% block body %}
+    <h1 class="mb-4">Upload a version of {{ mission.name }}</h1>
+    <div class="box">
+        {{ form_start(form) }}
+        {{ form_widget(form) }}
+        <div class="flex justify-center items-center gap-2">
+            <button type="submit" class="btn-primary">Upload</button>
+            <a href="{{ path('forumify_admin_command_net_s3_mission', { id: mission.id }) }}" class="btn-outlined">Cancel</a>
+        </div>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

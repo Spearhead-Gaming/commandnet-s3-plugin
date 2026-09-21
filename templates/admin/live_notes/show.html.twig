@@ -1,0 +1,54 @@
+{% extends '@Forumify/admin/base.html.twig' %}
+
+{% block title_page %}Live notes: {{ operation.title }}{% endblock %}
+
+{% block body %}
+    <h1 class="mb-1">{{ operation.title }}</h1>
+    <p class="text-small mb-4">
+        {{ operation.startDateTime|format_date }} &middot;
+        <a href="{{ path('forumify_admin_command_net_s3_live_notes') }}">All operations</a>
+    </p>
+
+    {% if canWrite %}
+        <div class="box mb-4">
+            {{ form_start(form) }}
+            {{ form_widget(form) }}
+            <div class="flex justify-center">
+                <button type="submit" class="btn-primary">Add note</button>
+            </div>
+            {{ form_end(form) }}
+        </div>
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-title">Timeline</div>
+        {% if notes is empty %}
+            <div class="card-body"><p class="text-small">No notes yet.</p></div>
+        {% else %}
+            <ul class="card-body p-0">
+                {% for note in notes %}
+                    <li class="p-2 pr-4 pl-4{% if not loop.last %} border-b{% endif %}">
+                        <span class="text-bold">{{ note.createdAt|date('H:i:s') }}</span>
+                        {{ note.text|nl2br }}
+                        {% if note.author %}<span class="text-small">({{ note.author.displayName }})</span>{% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    {% if notes is not empty %}
+        <div class="card">
+            <div class="card-title flex items-center justify-between gap-2">
+                <span>After-action report draft</span>
+                {% if is_granted('command-net.operations.submit_aar') %}
+                    <a class="btn-outlined btn-small" href="{{ path('command_net_operation_aar', { id: operation.id }) }}">Open the AAR form</a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <p class="text-small mb-2">Copy this into the AAR summary so you are editing, not starting from a blank page.</p>
+                <textarea readonly rows="10" onclick="this.select()">{{ draft }}</textarea>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

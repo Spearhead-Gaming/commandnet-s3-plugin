@@ -1,0 +1,79 @@
+{% extends '@Forumify/admin/base.html.twig' %}
+
+{% block title_page %}{{ mission.name }}{% endblock %}
+
+{% block body %}
+    <div class="flex items-center justify-between gap-2 mb-2">
+        <h1 class="mb-0">{{ mission.name }}</h1>
+        {% if canManage %}
+            <a class="btn-primary" href="{{ path('forumify_admin_command_net_s3_mission_upload', { id: mission.id }) }}">
+                <i class="ph ph-upload-simple"></i> Upload a version
+            </a>
+        {% endif %}
+    </div>
+    <p class="text-small mb-4">
+        {% if mission.owner %}Owner: {{ mission.owner.displayName }}.{% endif %}
+        {% if mission.operation %}
+            For operation
+            <a href="{{ path('command_net_operation_detail', { id: mission.operation.id }) }}">{{ mission.operation.title }}</a>.
+        {% endif %}
+    </p>
+    {% if mission.description %}
+        <p class="mb-4">{{ mission.description|nl2br }}</p>
+    {% endif %}
+
+    {% if mission.versions is empty %}
+        <p>No versions uploaded yet.</p>
+    {% endif %}
+
+    {% for version in mission.versions %}
+        <div class="card mb-4">
+            <div class="card-title flex items-center justify-between gap-2">
+                <span>{{ version.label }}{% if loop.first %} <span class="tag">Latest</span>{% endif %}</span>
+                <a class="btn-outlined btn-small" href="{{ path('forumify_admin_command_net_s3_mission_download', { id: version.id }) }}">
+                    <i class="ph ph-download-simple"></i> Download
+                </a>
+            </div>
+            <div class="card-body">
+                <p class="text-small mb-2">
+                    {{ version.originalName }} &middot; {{ (version.size / 1048576)|number_format(1) }} MB &middot;
+                    uploaded {{ version.createdAt|format_date }}{% if version.uploadedBy %} by {{ version.uploadedBy.displayName }}{% endif %}
+                </p>
+                {% if version.notes %}
+                    <p class="mb-2">{{ version.notes|nl2br }}</p>
+                {% endif %}
+                <label class="text-small text-bold">Playtest feedback link</label>
+                <input type="text" readonly value="{{ url('command_net_s3_mission_feedback', { token: version.feedbackToken }) }}" onclick="this.select()" class="mb-4">
+
+                <h3 class="mb-2">Feedback</h3>
+                {% set items = feedback[version.id]|default([]) %}
+                {% if items is empty %}
+                    <p class="text-small">None yet.</p>
+                {% else %}
+                    <ul class="p-0">
+                        {% for item in items %}
+                            <li class="pb-2 mb-2{% if not loop.last %} border-b{% endif %}">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div>
+                                        <span class="tag">{{ item.kind.label }}</span>
+                                        <span class="tag {{ item.resolved ? '' : 'tag-error' }}">{{ item.resolved ? 'Resolved' : 'Open' }}</span>
+                                        <span class="text-small">
+                                            {{ item.author ? item.author.displayName : 'Unknown' }}, {{ item.createdAt|format_date }}
+                                        </span>
+                                    </div>
+                                    {% if canManage %}
+                                        <form method="post" action="{{ path('forumify_admin_command_net_s3_mission_feedback_resolve', { id: item.id }) }}">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('mission_feedback_resolve_' ~ item.id) }}">
+                                            <button type="submit" class="btn-outlined btn-small">{{ item.resolved ? 'Reopen' : 'Mark resolved' }}</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                                <p class="mb-0 mt-1">{{ item.description|nl2br }}</p>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+{% endblock %}

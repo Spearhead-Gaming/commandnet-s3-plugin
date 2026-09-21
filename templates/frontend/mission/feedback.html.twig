@@ -1,0 +1,21 @@
+{% extends '@Forumify/frontend/base.html.twig' %}
+
+{% block title_page %}Mission feedback{% endblock %}
+
+{% block body %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <h1 class="mb-1">Feedback on {{ version.mission.name }}</h1>
+            <p class="text-small mb-0">Version {{ version.label }}. Your report goes to the mission developer.</p>
+        </div>
+    </div>
+
+    <div class="box">
+        {{ form_start(form) }}
+        {{ form_widget(form) }}
+        <div class="flex justify-center">
+            <button type="submit" class="btn-primary">Send feedback</button>
+        </div>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

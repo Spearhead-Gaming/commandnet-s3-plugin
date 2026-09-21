@@ -1,0 +1,26 @@
+{% extends '@Forumify/admin/base.html.twig' %}
+
+{% block title_page %}Live Notes{% endblock %}
+
+{% block body %}
+    <h1 class="mb-1">Live Notes</h1>
+    <p class="text-small mb-4">Pick the operation you are running to jot timestamped notes during it.</p>
+
+    {% if operations is empty %}
+        <p>There are no operations yet.</p>
+    {% else %}
+        <div class="card">
+            <ul class="card-body p-0">
+                {% for operation in operations %}
+                    <li class="p-2 pr-4 pl-4 flex items-center justify-between gap-2{% if not loop.last %} border-b{% endif %}">
+                        <div>
+                            <a class="text-bold" href="{{ path('forumify_admin_command_net_s3_live_notes_show', { id: operation.id }) }}">{{ operation.title }}</a>
+                            <span class="text-small">{{ operation.startDateTime|format_date }}</span>
+                        </div>
+                        <span class="tag">{{ operation.status.label }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+{% endblock %}

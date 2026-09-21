@@ -40,11 +40,14 @@ class CommandNetS3Plugin extends AbstractForumifyPlugin
                 'zeus_asset' => ['view', 'manage'],
                 'loadout' => ['view', 'manage'],
                 'server' => ['view', 'manage'],
+                'mission' => ['view', 'manage', 'manage_all'],
+                'live_notes' => ['view', 'manage'],
                 'audit_log' => ['view'],
                 'discord' => ['manage'],
             ],
             'briefing' => ['view'],
             'sop' => ['view', 'acknowledge'],
+            'mission' => ['feedback'],
         ];
     }
 
