@@ -1,0 +1,49 @@
+{% extends '@Forumify/admin/base.html.twig' %}
+
+{% block title_page %}Server Status{% endblock %}
+
+{% block body %}
+    <h1 class="mb-1">Server Status</h1>
+    <p class="text-small mb-4">
+        Asked live over the Steam query port each time this page loads. This shows whether a server is answering, its
+        map and mission and how many players are on. It cannot show uptime or the loaded mod list.
+    </p>
+
+    {% if rows is empty %}
+        <p>No servers yet. Add one under Game Servers.</p>
+    {% else %}
+        <div class="card">
+            <ul class="card-body p-0">
+                {% for row in rows %}
+                    <li class="p-2 pr-4 pl-4 flex items-center justify-between gap-2{% if not loop.last %} border-b{% endif %}">
+                        <div>
+                            <span class="text-bold">{{ row.server.name }}</span>
+                            <span class="text-small">{{ row.server.host }}:{{ row.server.queryPort }}</span>
+                            {% if row.info %}
+                                <p class="text-small mb-0">
+                                    {{ row.info.name }} &middot; {{ row.info.map }} &middot; {{ row.info.game }}
+                                </p>
+                            {% endif %}
+                            {% if row.modCount > 0 %}
+                                <p class="text-small mb-0">
+                                    {{ row.modCount }} mods tracked,
+                                    {% if row.outdated > 0 %}<strong>{{ row.outdated }} out of date</strong>{% else %}none out of date{% endif %}
+                                </p>
+                            {% endif %}
+                        </div>
+                        <div class="text-right">
+                            {% if row.info %}
+                                <span class="tag">Online</span>
+                                <p class="text-small mb-0">
+                                    {{ row.info.players }}/{{ row.info.maxPlayers }} players &middot; {{ row.info.pingMs }} ms
+                                </p>
+                            {% else %}
+                                <span class="tag tag-error">No answer</span>
+                            {% endif %}
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+{% endblock %}
