@@ -1,0 +1,40 @@
+{% extends '@Forumify/frontend/base.html.twig' %}
+
+{% block title_page %}{{ briefing.missionName }}{% endblock %}
+
+{% block body %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="tag">{{ briefing.status.label }}</span>
+                {% if briefing.status.value == 'draft' %}
+                    <span class="text-small">Only staff can see this until it is marked Ready.</span>
+                {% endif %}
+            </div>
+            <h1 class="mb-2">{{ briefing.missionName }}</h1>
+            <p class="text-small mb-0">
+                <i class="ph ph-calendar"></i> {{ operation.title }} &middot; {{ operation.startDateTime|format_date }}
+            </p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-title">Task / purpose</div>
+        <div class="card-body">{{ briefing.taskPurpose|rich }}</div>
+    </div>
+
+    {% if briefing.objectiveList is not empty %}
+        <div class="card mb-4">
+            <div class="card-title">Objectives</div>
+            <ol class="card-body">
+                {% for objective in briefing.objectiveList %}
+                    <li>{{ objective }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+    {% endif %}
+
+    <a class="btn-link" href="{{ path('command_net_operation_detail', { id: operation.id }) }}">
+        <i class="ph ph-arrow-left"></i> Back to operation
+    </a>
+{% endblock %}
