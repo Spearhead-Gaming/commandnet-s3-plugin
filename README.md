@@ -56,11 +56,15 @@ All three phases of the spec are built.
 | 3 | Mission testing / feedback log | Built |
 | 3 | Server status / performance dashboard | Built, name / map / mission / players / ping only |
 | 3 | Mod / addon version tracker | Built, versions entered by hand |
+| Extra | S3 dashboard and site menu item | Built |
+| Extra | Operation information page | Built, extra sections typed as one entry per line |
 
 Nothing here has automated tests. It has been checked statically (container, Twig and
 syntax lint, schema drift) plus targeted runs of the riskiest logic: the server query
 against a local fake server, the mission file storage (name generation, refused extensions,
-path traversal), version comparison and the class-name parser. In a browser, the mission
+path traversal), version comparison, the class-name parser, and the operation page's text
+parser and template (rendered against hostile input under strict variable checking). In a
+browser, the mission
 flow has been run by hand: creating a mission, uploading three versions (200 KB, 1.5 MB and
 5 MB, with the stored sizes matching exactly) and downloading one. **The other pages have
 not been checked with real data**, so do that with some test data before relying on them.
@@ -115,7 +119,7 @@ vehicles each Unit fields, and Equipment class names), so this adds only the mis
 ### Audit log
 
 Briefings, SOP documents and versions, Zeus assets, kit approvals, game servers, server
-mods, missions, mission versions and mission feedback implement Forumify's
+mods, missions, mission versions, mission feedback and operation pages implement Forumify's
 `AuditableEntityInterface`, so Forumify itself records who created, changed or removed
 them and which fields changed. That is also the mod update history: every change to a
 mod's installed version is logged with who and when. **Audit Log** is a read-only view of just those entries, so
@@ -178,6 +182,52 @@ that form, which would mean changing `commandnet-plugin`.
   modpack, flagged Out of date when the server is behind. Versions are entered by hand and
   compared with `version_compare`, so 1.2.0 is correctly behind 1.10.0.
 
+### Admin menu
+
+The **Command Net S3** admin menu is grouped the way the spec groups the modules, with a
+Dashboard link at the top:
+
+- **Zeus / GM**: Briefings, Zeus Assets, Operation Pages, Live Notes.
+- **Mission Development**: SOP Library, SOP Versions, Missions, Loadout Check, Kit Approvals.
+- **Server Administration**: Server Status, Game Servers, Server Mods, Discord Announcements,
+  Audit Log.
+
+A category only appears when the user can see something in it, because Forumify's own menu
+filter would otherwise leave an emptied category behind as a blank flyout.
+
+### S3 dashboard and the site menu
+
+`/s3` is a home page for S3 staff, gated by `dashboard.view`. Each section appears, and runs
+its queries, only when the viewer has the permission for what it shows: upcoming operations
+with their briefing state, your SOP documents awaiting acknowledgment, open playtest
+feedback, out-of-date mods, recent S3 audit activity, and a list of tools.
+
+For Forumify's site **Menu Builder** there is an **S3** item type. Tick which pages it covers
+(Dashboard, Current Operation, SOP Library): one page renders as a plain link, several as a
+dropdown, and pages the viewer can't access are left out. Use the item's own permissions in
+the Menu Builder to limit it to S3 staff roles. Nothing is added to the site menu by default.
+
+### Operation information page
+
+A live page for an operation, ported from the community's static operations-page design.
+
+- `/operations/current` shows the operation in progress, otherwise the next scheduled one
+  (or says there isn't one). `/operations/{id}/info` shows any operation. Needs
+  `operation_info.view`.
+- **Read live on every view**, so it never goes stale: title, status, dates, location, unit,
+  RSVP counts, the OPORD body, the briefing's mission and objectives, the countdown, the mods
+  tracked on the chosen server, and that server's online state, player count and map.
+- **Stored on an Operation Page**, edited under **Zeus / GM → Operation Pages**: order number,
+  one-line summary, server, preset and Steam collection links, and text boxes for the
+  timeline, task organization, mission data, comms plan, ROE, pre-op checklist and quick
+  links. Each is one entry per line with columns split by `|`, for example
+  `1900 | Platoon Briefing | Full OPORD brief`, and the form shows an example for each.
+- Until an Operation Page is **Published**, only staff (`operation_page.manage`) see its
+  sections; everyone else still gets the operation's own details. A draft briefing is hidden
+  from non-staff too.
+- All text is escaped, and a link must start with `http(s)://` or `/`, so a typed
+  `javascript:` link is dropped.
+
 ## Permissions
 
 Checked as `command-net-s3.<area>.<action>` (the prefix is slugged from the plugin's
@@ -196,15 +246,19 @@ display name, "Command Net S3"), declared in `CommandNetS3Plugin::getPermissions
 | `admin.mission.manage` | Create missions; upload versions and resolve feedback on missions you own |
 | `admin.mission.manage_all` | Leads: edit or delete any mission, upload to or resolve on any |
 | `admin.live_notes.view` / `.manage` | See / add live mission notes |
+| `admin.operation_page.view` / `.manage` | See / edit Operation Pages; `manage` also previews unpublished ones |
 | `briefing.view` | The player-facing briefing page |
 | `sop.view` / `sop.acknowledge` | Read the SOP library / acknowledge a version |
 | `mission.feedback` | Submit playtest feedback through a shared feedback link |
+| `dashboard.view` | Open the S3 dashboard |
+| `operation_info.view` | Open the operation information page |
 
 ## Tables
 
 `s3_briefing`, `s3_sop`, `s3_sop_version`, `s3_sop_acknowledgement`, `s3_zeus_asset`,
 `s3_mission_kit_approval`, `s3_game_server`, `s3_server_mod`, `s3_mission`,
-`s3_mission_version`, `s3_mission_feedback`, `s3_mission_note`. The audit log uses Forumify's
+`s3_mission_version`, `s3_mission_feedback`, `s3_mission_note`, `s3_operation_page`. The
+audit log uses Forumify's
 own `audit_log` table, and Discord settings are stored under the `command_net_s3.discord`
 setting. Uploaded mission files are on disk in `var/s3-missions/`, not in the database.
 
@@ -214,12 +268,14 @@ setting. Uploaded mission files are on disk in `var/s3-missions/`, not in the da
   has been run by hand. Not checked with real data: submitting and resolving playtest
   feedback, the browser-side refusal of a disallowed upload (the storage layer's refusals
   are tested), the non-owner permission checks, Live Notes, Server Status, briefings, the
-  SOP library and the rest. The loadout check's Approved path hasn't been tried against real
-  equipment, and no Discord message has been sent.
+  SOP library, the dashboard, the categorized admin menu, the Menu Builder "S3" item type,
+  the operation information page and the rest. The loadout check's Approved path hasn't been
+  tried against real equipment, and no Discord message has been sent.
 - **Briefing map image upload** from the spec isn't built.
 - **"Slotted" means an Attending or Maybe RSVP.** Change `BriefingController::isSlotted()`
   if you gain a real slotting concept.
-- **No navigation links** to the SOP library (`/sops`) in the site menu yet.
+- **Nothing is in the site menu until an admin adds it.** Use the "S3" item type in
+  Forumify's Menu Builder for the dashboard, the current operation and the SOP library.
 - **The Zeus library has no player- or GM-facing page**, so Zeus/GM staff need admin-panel
   access plus the view permission.
 - **The audit log view lists its entities explicitly** in `S3AuditLogTable::AUDITED_ENTITIES`;
@@ -238,6 +294,13 @@ setting. Uploaded mission files are on disk in `var/s3-missions/`, not in the da
 - **The AAR draft is copy and paste**, not a prefill of Command Net's AAR form.
 - **Live notes have no "assigned GM"** per operation, because Command Net doesn't model one.
   Anyone with `live_notes.manage` can add notes to any operation.
+- **On the operation page the OPORD is one rich-text block**, not five collapsible
+  paragraphs, because Command Net stores it as a single body. Mods have no Required /
+  Optional / Client tag, so the design's filter chips are gone (the search box remains).
+- **The operation page queries the game server on every view**, which adds a moment when
+  it is down. Cache the result briefly if the page gets busy.
+- **The operation page design imports its fonts from Google Fonts**, so viewers' browsers
+  make that request. Remove the `@import` in `_page.html.twig` to avoid it.
 
 ## Development
 
