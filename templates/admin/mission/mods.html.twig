@@ -1,0 +1,25 @@
+{% extends '@Forumify/admin/base.html.twig' %}
+
+{% block title_page %}Mod list{% endblock %}
+
+{% block body %}
+    <h1 class="mb-1">Mod list for {{ mission.name }}</h1>
+    <p class="text-small mb-4">
+        Players get a launcher preset generated from this list, on the operation page and on the mission page. Give it a
+        preset you exported from the Arma 3 Launcher, or type the list; either way the list you save replaces the old one.
+        {% if count > 0 %}
+            It has {{ count }} entries now.
+            <a href="{{ path('forumify_admin_command_net_s3_mission_modpack', { id: mission.id }) }}">Download the current preset</a>.
+        {% endif %}
+    </p>
+
+    <div class="box">
+        {{ form_start(form) }}
+        {{ form_widget(form) }}
+        <div class="flex justify-center items-center gap-2">
+            <button type="submit" class="btn-primary">Save mod list</button>
+            <a href="{{ path('forumify_admin_command_net_s3_mission', { id: mission.id }) }}" class="btn-outlined">Cancel</a>
+        </div>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

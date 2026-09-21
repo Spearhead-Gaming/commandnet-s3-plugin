@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+  <!--Preset generated for {{ name }}. Import it in the Arma 3 Launcher.-->
+  <head>
+    <meta name="arma:Type" content="preset" />
+    <meta name="arma:PresetName" content="{{ name }}" />
+    <meta name="generator" content="Command Net S3" />
+    <title>Arma 3</title>
+    <style>
+      body { margin: 0; padding: 1em; color: #222; background: #fff; font: 14px/1.4 Roboto, Arial, sans-serif; }
+      h1 { font-size: 1.6em; }
+      table { border-collapse: collapse; }
+      td { padding: 4px 12px 4px 0; border-bottom: 1px solid #ddd; }
+      .from-steam { color: #1b5e8a; }
+      .from-local { color: #8a5a1b; }
+    </style>
+  </head>
+  <body>
+    <h1>Arma 3 - Preset <strong>{{ name }}</strong></h1>
+    <p class="before-list">
+      <em>To import this preset, drag this file onto the launcher window. Or click the MODS tab, then PRESET in the top right, then IMPORT at the bottom, and finally select this file.</em>
+    </p>
+    <div class="mod-list">
+      <table>
+{% for mod in mods %}
+        <tr data-type="ModContainer">
+          <td data-type="DisplayName">{{ mod.name }}</td>
+          <td>{% if mod.url %}<span class="from-steam">Steam</span>{% else %}<span class="from-local">Local</span>{% endif %}</td>
+          <td>{% if mod.url %}<a href="{{ mod.url }}" data-type="Link">{{ mod.url }}</a>{% endif %}</td>
+        </tr>
+{% endfor %}
+      </table>
+    </div>
+{% if dlc %}
+    <div class="dlc-list">
+      <table>
+{% for item in dlc %}
+        <tr data-type="DlcContainer">
+          <td data-type="DisplayName">{{ item.name }}</td>
+          <td>{% if item.url %}<a href="{{ item.url }}" data-type="Link">{{ item.url }}</a>{% endif %}</td>
+        </tr>
+{% endfor %}
+      </table>
+    </div>
+{% endif %}
+  </body>
+</html>

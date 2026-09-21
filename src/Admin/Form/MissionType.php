@@ -23,7 +23,9 @@ class MissionType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Mission::class,
+            'mod_text' => '',
         ]);
+        $resolver->setAllowedTypes('mod_text', 'string');
     }
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -42,6 +44,10 @@ class MissionType extends AbstractType
             ->add('description', TextareaType::class, [
                 'required' => false,
                 'attr' => ['rows' => 5],
+            ])
+            ->add('mods', MissionModsType::class, [
+                'mapped' => false,
+                'mod_text' => $options['mod_text'],
             ])
         ;
     }

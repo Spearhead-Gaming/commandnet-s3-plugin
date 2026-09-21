@@ -282,7 +282,7 @@
               <div class="modpack">
                 <div>
                   <h3>Mod-Pack &mdash; {{ operation.title }}</h3>
-                  <p>{{ mods|length }} mods{% if server %} &bull; {{ server.name }}{% endif %}</p>
+                  <p>{{ mods|length }} mods</p>
                 </div>
                 <div style="display:flex;gap:10px;flex-wrap:wrap">
                   {% if presetUrl %}
@@ -301,17 +301,20 @@
                 <input type="search" id="ops-modsearch" placeholder="Search mods..." aria-label="Search mods">
               </div>
               <div class="tbl-wrap">
+                {% set hasVersions = mods|filter(m => m.version)|length > 0 %}
                 <table id="ops-modtable">
-                  <thead><tr><th>#</th><th>Mod</th><th>Version</th><th></th></tr></thead>
+                  <thead><tr><th>#</th><th>Mod</th>{% if hasVersions %}<th>Version</th>{% endif %}<th></th></tr></thead>
                   <tbody>
                     {% for mod in mods %}
                       <tr>
                         <td class="mono">{{ '%02d'|format(loop.index) }}</td>
-                        <td>{{ mod.name }}</td>
-                        <td class="mono">{{ mod.installedVersion }}</td>
+                        <td>{{ mod.name }}{% if mod.dlc %} <span class="mono" style="color:var(--warn)">DLC</span>{% endif %}</td>
+                        {% if hasVersions %}<td class="mono">{{ mod.version }}</td>{% endif %}
                         <td>
-                          {% if mod.workshopId %}
-                            <a class="dl" href="https://steamcommunity.com/sharedfiles/filedetails/?id={{ mod.workshopId|url_encode }}" target="_blank" rel="noopener noreferrer">Workshop &rarr;</a>
+                          {% if mod.url %}
+                            <a class="dl" href="{{ mod.url }}" target="_blank" rel="noopener noreferrer">{{ mod.dlc ? 'Store' : 'Workshop' }} &rarr;</a>
+                          {% else %}
+                            <span class="mono" style="color:var(--muted)">Local</span>
                           {% endif %}
                         </td>
                       </tr>

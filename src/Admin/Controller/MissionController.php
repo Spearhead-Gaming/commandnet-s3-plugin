@@ -8,8 +8,10 @@ use Forumify\Admin\Crud\AbstractCrudController;
 use Forumify\Core\Entity\User;
 use MajesticDev\CommandNetS3\Admin\Form\MissionType;
 use MajesticDev\CommandNetS3\Entity\Mission;
+use MajesticDev\CommandNetS3\Service\MissionModList;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Contracts\Service\Attribute\Required;
 
 /**
  * Any Mission Dev with manage can create a mission and becomes its owner. Editing or deleting
@@ -36,9 +38,20 @@ class MissionController extends AbstractCrudController
         return 'MissionTable';
     }
 
+    private MissionModList $modList;
+
+    #[Required]
+    public function setModList(MissionModList $modList): void
+    {
+        $this->modList = $modList;
+    }
+
     protected function getForm(?object $data): FormInterface
     {
-        return $this->createForm(MissionType::class, $data);
+        // Start the mod list box from what is stored, so editing the text edits the list.
+        $modText = $data instanceof Mission && $data->getId() !== null ? $this->modList->toText($data) : '';
+
+        return $this->createForm(MissionType::class, $data, ['mod_text' => $modText]);
     }
 
     protected function save(bool $isNew, FormInterface $form): object
@@ -49,6 +62,15 @@ class MissionController extends AbstractCrudController
             $mission->setOwner($user);
         }
 
-        return parent::save($isNew, $form);
+        $saved = parent::save($isNew, $form);
+
+        // The list becomes what was uploaded or typed. The mission has to exist first.
+        if ($saved instanceof Mission) {
+            /** @var array{mods: list<\MajesticDev\CommandNetS3\Service\ParsedMod>} $mods */
+            $mods = $form->get('mods')->getData();
+            $this->modList->replace($saved, $mods['mods']);
+        }
+
+        return $saved;
     }
 }

@@ -10,7 +10,11 @@ use MajesticDev\CommandNetS3\Entity\MissionFeedback;
 use MajesticDev\CommandNetS3\Entity\MissionVersion;
 use MajesticDev\CommandNetS3\Repository\MissionFeedbackRepository;
 use MajesticDev\CommandNetS3\Repository\MissionVersionRepository;
+use MajesticDev\CommandNetS3\Admin\Form\MissionModsType;
+use MajesticDev\CommandNetS3\Service\MissionModList;
 use MajesticDev\CommandNetS3\Service\MissionStorage;
+use MajesticDev\CommandNetS3\Service\ModListParser;
+use MajesticDev\CommandNetS3\Service\PresetRenderer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -37,6 +41,8 @@ class MissionDetailController extends AbstractController
         private readonly MissionVersionRepository $versionRepository,
         private readonly MissionFeedbackRepository $feedbackRepository,
         private readonly MissionStorage $storage,
+        private readonly MissionModList $modList,
+        private readonly PresetRenderer $presetRenderer,
     ) {
     }
 
@@ -54,7 +60,52 @@ class MissionDetailController extends AbstractController
             'mission' => $mission,
             'feedback' => $feedback,
             'canManage' => $this->canManage($mission),
+            'mods' => array_map(static fn ($mod) => [
+                'name' => $mod->name,
+                'dlc' => $mod->kind->value === 'dlc',
+                'url' => ModListParser::url($mod->kind, $mod->steamId),
+            ], $this->modList->forMission($mission)),
         ]);
+    }
+
+    #[Route('/command-net-s3/missions/{id}/mods', 'command_net_s3_mission_mods', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    public function mods(Mission $mission, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('command-net-s3.admin.mission.view');
+        if (!$this->canManage($mission)) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $form = $this->createForm(MissionModsType::class, null, ['mod_text' => $this->modList->toText($mission)]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            /** @var array{mods: list<\MajesticDev\CommandNetS3\Service\ParsedMod>} $data */
+            $data = $form->getData();
+            $this->modList->replace($mission, $data['mods']);
+
+            $this->addFlash('success', 'Mod list saved.');
+            return $this->redirectToRoute('forumify_admin_command_net_s3_mission', ['id' => $mission->getId()]);
+        }
+
+        return $this->render('@CommandNetS3Plugin/admin/mission/mods.html.twig', [
+            'mission' => $mission,
+            'form' => $form->createView(),
+            'count' => count($this->modList->forMission($mission)),
+        ]);
+    }
+
+    #[Route('/command-net-s3/missions/{id}/modpack.html', 'command_net_s3_mission_modpack', requirements: ['id' => '\d+'])]
+    public function modpack(Mission $mission): Response
+    {
+        $this->denyAccessUnlessGranted('command-net-s3.admin.mission.view');
+
+        $mods = $this->modList->forMission($mission);
+        if ($mods === []) {
+            throw $this->createNotFoundException('This mission has no mod list yet.');
+        }
+
+        return $this->presetRenderer->download($mission->getName(), $mods);
     }
 
     #[Route('/command-net-s3/missions/{id}/upload', 'command_net_s3_mission_upload', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]

@@ -22,6 +22,43 @@
         <p class="mb-4">{{ mission.description|nl2br }}</p>
     {% endif %}
 
+    <div class="card mb-4">
+        <div class="card-title flex items-center justify-between gap-2">
+            <span>Mod list ({{ mods|length }})</span>
+            <span class="flex items-center gap-2">
+                {% if mods %}
+                    <a class="btn-outlined btn-small" href="{{ path('forumify_admin_command_net_s3_mission_modpack', { id: mission.id }) }}">
+                        <i class="ph ph-download-simple"></i> Download preset
+                    </a>
+                {% endif %}
+                {% if canManage %}
+                    <a class="btn-outlined btn-small" href="{{ path('forumify_admin_command_net_s3_mission_mods', { id: mission.id }) }}">
+                        {{ mods ? 'Edit mod list' : 'Add a mod list' }}
+                    </a>
+                {% endif %}
+            </span>
+        </div>
+        <div class="card-body">
+            {% if mods is empty %}
+                <p class="text-small mb-0">No mod list yet. Upload the preset you exported from the Arma 3 Launcher, or type the list.</p>
+            {% else %}
+                <ul class="p-0">
+                    {% for mod in mods %}
+                        <li class="{% if not loop.last %}pb-1 mb-1 border-b{% endif %}">
+                            {{ mod.name }}
+                            {% if mod.dlc %}<span class="tag">DLC</span>{% endif %}
+                            {% if mod.url %}
+                                <a class="text-small" href="{{ mod.url }}" target="_blank" rel="noopener noreferrer">Steam</a>
+                            {% else %}
+                                <span class="tag">Local</span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    </div>
+
     {% if mission.versions is empty %}
         <p>No versions uploaded yet.</p>
     {% endif %}
