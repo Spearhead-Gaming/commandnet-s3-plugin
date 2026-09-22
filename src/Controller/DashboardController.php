@@ -30,6 +30,9 @@ class DashboardController extends AbstractController
 
         return $this->render('@CommandNetS3Plugin/frontend/dashboard/index.html.twig', [
             'operations' => $can('admin.briefing.view') ? $this->data->upcomingOperations() : null,
+            // Command Net data, so gated by its permission; null when the installed Command Net has no patrols.
+            'patrolsMissingAar' => $this->isGranted('command-net.admin.operations.view') ? $this->data->patrolsMissingAar() : null,
+            'upcomingPatrols' => $this->isGranted('command-net.admin.operations.view') ? $this->data->upcomingPatrols() : null,
             'pendingSops' => $user instanceof User && $can('sop.view') ? $this->data->pendingAcknowledgements($user) : null,
             'feedback' => $can('admin.mission.view') ? $this->data->openFeedback() : null,
             'outdatedMods' => $can('admin.server.view') ? $this->data->outdatedMods() : null,

@@ -7,9 +7,12 @@ namespace MajesticDev\CommandNetS3\Service;
 use Forumify\Core\Entity\AuditLog;
 use Forumify\Core\Entity\User;
 use Forumify\Core\Repository\AuditLogRepository;
+use MajesticDev\CommandNet\Entity\Enum\AarStatus;
 use MajesticDev\CommandNet\Entity\Enum\OperationStatus;
+use MajesticDev\CommandNet\Entity\Enum\OperationType;
 use MajesticDev\CommandNet\Entity\Operation;
 use MajesticDev\CommandNet\Repository\OperationRepository;
+use MajesticDev\CommandNet\Service\EventRules;
 use MajesticDev\CommandNetS3\Admin\Components\Table\S3AuditLogTable;
 use MajesticDev\CommandNetS3\Entity\Briefing;
 use MajesticDev\CommandNetS3\Entity\MissionFeedback;
@@ -50,21 +53,82 @@ class DashboardData
      */
     public function upcomingOperations(): array
     {
-        /** @var list<Operation> $operations */
-        $operations = $this->operationRepository->createQueryBuilder('o')
+        $qb = $this->operationRepository->createQueryBuilder('o')
             ->where('o.startDateTime >= :since')
             ->andWhere('o.status IN (:statuses)')
             ->setParameter('since', new \DateTime('-1 day'))
             ->setParameter('statuses', [OperationStatus::SCHEDULED->value, OperationStatus::IN_PROGRESS->value])
             ->orderBy('o.startDateTime', 'ASC')
-            ->setMaxResults(self::LIST_LIMIT)
-            ->getQuery()
-            ->getResult();
+            ->setMaxResults(self::LIST_LIMIT);
+        // Patrols have their own card below, and no briefing.
+        if ($this->supportsPatrols()) {
+            $qb->andWhere('o.type != :patrol')->setParameter('patrol', OperationType::PATROL->value);
+        }
+
+        /** @var list<Operation> $operations */
+        $operations = $qb->getQuery()->getResult();
 
         return array_map(fn (Operation $operation) => [
             'operation' => $operation,
             'briefing' => $this->briefingRepository->findOneBy(['operation' => $operation]),
         ], $operations);
+    }
+
+    /**
+     * Patrols coming up, soonest first. Null when the installed Command Net has no patrols
+     * yet, so the dashboard just leaves the card out.
+     *
+     * @return list<Operation>|null
+     */
+    public function upcomingPatrols(): ?array
+    {
+        if (!$this->supportsPatrols()) {
+            return null;
+        }
+
+        return array_values($this->operationRepository->findUpcomingPatrols(self::LIST_LIMIT));
+    }
+
+    /**
+     * Patrols that have ended with no after-action report, oldest first, each flagged overdue
+     * once past its deadline. "count" is all of them, "rows" the first few. Null when the
+     * installed Command Net has no patrols yet.
+     *
+     * @return array{count: int, rows: list<array{patrol: Operation, overdue: bool, dueAt: \DateTimeImmutable}>}|null
+     */
+    public function patrolsMissingAar(): ?array
+    {
+        if (!$this->supportsPatrols()) {
+            return null;
+        }
+
+        // EventRules has no dependencies, so it is built here rather than injected: injecting it
+        // would stop the container compiling on a Command Net that does not have it.
+        $rules = new EventRules();
+        $now = new \DateTimeImmutable();
+        $patrols = $this->operationRepository->findPatrolsAwaitingAar(null, $now);
+
+        return [
+            'count' => count($patrols),
+            'rows' => array_map(static fn (Operation $patrol) => [
+                'patrol' => $patrol,
+                'overdue' => $rules->aarStatus($patrol, $now) === AarStatus::OVERDUE,
+                'dueAt' => $rules->aarDueAt($patrol),
+            ], array_slice($patrols, 0, self::LIST_LIMIT)),
+        ];
+    }
+
+    /**
+     * Patrol support arrived in Command Net after this plugin first shipped, so check the
+     * installed version has all of it before touching any of it.
+     */
+    private function supportsPatrols(): bool
+    {
+        return class_exists(EventRules::class)
+            && enum_exists(AarStatus::class)
+            && OperationType::tryFrom('patrol') !== null
+            && method_exists($this->operationRepository, 'findPatrolsAwaitingAar')
+            && method_exists($this->operationRepository, 'findUpcomingPatrols');
     }
 
     /**
