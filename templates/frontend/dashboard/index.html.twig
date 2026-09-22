@@ -38,6 +38,52 @@
                 </div>
             {% endif %}
 
+            {% if patrolsMissingAar is not null %}
+                <div class="card">
+                    <div class="card-title">Patrols missing an AAR ({{ patrolsMissingAar.count }})</div>
+                    {% if patrolsMissingAar.rows is empty %}
+                        <div class="card-body"><p class="text-small">Every finished patrol has its after-action report.</p></div>
+                    {% else %}
+                        <ul class="card-body p-0">
+                            {% for row in patrolsMissingAar.rows %}
+                                <li class="p-2 pr-4 pl-4 flex items-center justify-between gap-2{% if not loop.last %} border-b{% endif %}">
+                                    <div>
+                                        <a class="text-bold" href="{{ path('command_net_operation_detail', { id: row.patrol.id }) }}">{{ row.patrol.title }}</a>
+                                        <span class="text-small">
+                                            {{ row.patrol.leader ? row.patrol.leader.displayName : 'No leader' }},
+                                            {{ row.patrol.startDateTime|format_date }}
+                                        </span>
+                                    </div>
+                                    <span class="tag {{ row.overdue ? 'tag-error' : '' }}">
+                                        {{ row.overdue ? 'Overdue' : 'Due' }} {{ row.dueAt|format_date(true) }}
+                                    </span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if upcomingPatrols is not null %}
+                <div class="card">
+                    <div class="card-title">Upcoming patrols</div>
+                    {% if upcomingPatrols is empty %}
+                        <div class="card-body"><p class="text-small">No upcoming patrols.</p></div>
+                    {% else %}
+                        <ul class="card-body p-0">
+                            {% for patrol in upcomingPatrols %}
+                                <li class="p-2 pr-4 pl-4{% if not loop.last %} border-b{% endif %}">
+                                    <a class="text-bold" href="{{ path('command_net_operation_detail', { id: patrol.id }) }}">{{ patrol.title }}</a>
+                                    <span class="text-small">
+                                        {{ patrol.startDateTime|format_date }}{% if patrol.leader %}, led by {{ patrol.leader.displayName }}{% endif %}
+                                    </span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+
             {% if feedback is not null %}
                 <div class="card">
                     <div class="card-title flex items-center justify-between gap-2">
