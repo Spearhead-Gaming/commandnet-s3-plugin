@@ -39,6 +39,9 @@
                                 </p>
                             {% else %}
                                 <span class="tag tag-error">No answer</span>
+                                {% if row.error %}
+                                    <p class="text-small mb-0" style="max-width: 320px;">{{ row.error }}</p>
+                                {% endif %}
                             {% endif %}
                         </div>
                     </li>

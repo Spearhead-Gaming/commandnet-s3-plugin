@@ -32,9 +32,11 @@ class ServerStatusController extends AbstractController
         $rows = [];
         foreach ($this->serverRepository->findBy([], ['name' => 'ASC']) as $server) {
             $mods = $this->modRepository->findBy(['server' => $server]);
+            $info = $this->query->query($server);
             $rows[] = [
                 'server' => $server,
-                'info' => $this->query->query($server),
+                'info' => $info,
+                'error' => $info === null ? $this->query->getLastError() : null,
                 'modCount' => count($mods),
                 'outdated' => count(array_filter($mods, static fn ($mod) => $mod->isOutdated())),
             ];

@@ -20,18 +20,37 @@ class ServerQuery
     private const float TIMEOUT_SECONDS = 1.5;
 
     /**
+     * Why the last query() call returned null, for display next to "No answer" - e.g.
+     * distinguishing a DNS/connect failure from a timeout from a malformed reply, which all
+     * looked identical before this. Only meaningful immediately after a query() call that
+     * returned null; each query() call resets it first.
+     */
+    private ?string $lastError = null;
+
+    /**
      * @return array{name: string, map: string, game: string, players: int, maxPlayers: int, bots: int, pingMs: int}|null
-     *         null when the server did not answer or answered with something unexpected
+     *         null when the server did not answer or answered with something unexpected -
+     *         see getLastError() for why
      */
     public function query(GameServer $server): ?array
     {
+        $this->lastError = null;
+        $host = $server->getHost();
+        $port = $server->getQueryPort();
+
         $socket = @stream_socket_client(
-            sprintf('udp://%s:%d', $server->getHost(), $server->getQueryPort()),
+            sprintf('udp://%s:%d', $host, $port),
             $errorCode,
             $errorMessage,
             self::TIMEOUT_SECONDS,
         );
         if ($socket === false) {
+            $this->lastError = sprintf(
+                'Could not open a connection to %s:%d (%s).',
+                $host,
+                $port,
+                $errorMessage !== '' ? $errorMessage : 'unknown error',
+            );
             return null;
         }
 
@@ -46,12 +65,45 @@ class ServerQuery
             }
             $pingMs = (int)round((microtime(true) - $started) * 1000);
 
-            $info = $response !== null ? self::parseInfo($response) : null;
+            if ($response === null) {
+                $this->lastError = sprintf(
+                    'No response from %s:%d within %.1fs. Check this is really the Steam query'
+                    . ' port (often the game port plus 1, but some hosts set it separately),'
+                    . ' that the server is running, and that Steam/server-browser querying is'
+                    . ' enabled - your host may firewall this port or disable it separately'
+                    . ' from the game itself.',
+                    $host,
+                    $port,
+                    self::TIMEOUT_SECONDS,
+                );
+                return null;
+            }
 
-            return $info === null ? null : $info + ['pingMs' => $pingMs];
+            $info = self::parseInfo($response);
+            if ($info === null) {
+                $this->lastError = sprintf(
+                    'Got a %d byte reply from %s:%d, but it was not a valid Source Engine Query'
+                    . ' response - check this is actually the query port.',
+                    strlen($response),
+                    $host,
+                    $port,
+                );
+                return null;
+            }
+
+            return $info + ['pingMs' => $pingMs];
         } finally {
             fclose($socket);
         }
+    }
+
+    /**
+     * Why the last query() call returned null. Null if the last call succeeded (or none was
+     * made yet).
+     */
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
     }
 
     /**
