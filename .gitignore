@@ -3,3 +3,7 @@
 /.phpcs-cache
 /.phpunit.cache
 composer.lock
+
+
+# Local dev server login details - never commit.
+/dev-credentials.local.md
