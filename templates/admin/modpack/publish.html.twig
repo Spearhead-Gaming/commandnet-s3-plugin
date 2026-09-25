@@ -1,0 +1,35 @@
+{% extends '@Forumify/admin/base.html.twig' %}
+
+{% block title_page %}Publish a version{% endblock %}
+
+{% block body %}
+    <h1 class="mb-1">Publish a version of {{ pack.name }}</h1>
+    <p class="text-small mb-4">
+        {% if hasPrevious %}
+            The list starts from the current version. Change it, or upload a preset exported from the Arma 3 Launcher to replace it.
+        {% else %}
+            This is the pack's first version. Upload a preset exported from the Arma 3 Launcher, or type the list.
+        {% endif %}
+        The version keeps exactly this list, so older versions stay downloadable.
+    </p>
+    {% if previewed %}
+        <p class="alert-info mb-4">Changelog drafted from the difference to the previous version. Edit it if you like, then publish. Nothing is saved yet.</p>
+    {% endif %}
+
+    <div class="box">
+        {{ form_start(form) }}
+        {{ form_row(form.label) }}
+        {# Errors on the mod list bubble up to the form itself. #}
+        {% for error in form.vars.errors %}
+            <p class="alert-error mb-2">{{ error.message }}</p>
+        {% endfor %}
+        {{ form_row(form.mods) }}
+        {{ form_row(form.changelog) }}
+        <div class="flex justify-center items-center gap-2">
+            {{ form_widget(form.preview) }}
+            {{ form_widget(form.publish) }}
+            <a href="{{ path('forumify_admin_command_net_s3_mod_pack', { id: pack.id }) }}" class="btn-outlined">Cancel</a>
+        </div>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

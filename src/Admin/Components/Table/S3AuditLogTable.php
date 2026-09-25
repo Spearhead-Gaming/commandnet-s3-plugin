@@ -40,7 +40,7 @@ class S3AuditLogTable extends AbstractDoctrineTable
     /**
      * Add new auditable S3 entities here so they show up in this view.
      */
-    public const AUDITED_ENTITIES =[Briefing::class, Sop::class, SopVersion::class, ZeusAsset::class, MissionKitApproval::class, GameServer::class, ServerMod::class, Mission::class, MissionVersion::class, MissionFeedback::class, OperationPage::class];
+    public const AUDITED_ENTITIES =[Briefing::class, Sop::class, SopVersion::class, ZeusAsset::class, MissionKitApproval::class, GameServer::class, ServerMod::class, Mission::class, MissionVersion::class, MissionFeedback::class, OperationPage::class, ModPack::class, ModPackVersion::class];
 
     public function __construct(
         private readonly CoreRuntime $coreRuntime,

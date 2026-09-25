@@ -41,6 +41,7 @@ class CommandNetS3Plugin extends AbstractForumifyPlugin
                 'loadout' => ['view', 'manage'],
                 'server' => ['view', 'manage'],
                 'mission' => ['view', 'manage', 'manage_all'],
+                'modpack' => ['view', 'manage'],
                 'live_notes' => ['view', 'manage'],
                 'operation_page' => ['view', 'manage'],
                 'audit_log' => ['view'],
