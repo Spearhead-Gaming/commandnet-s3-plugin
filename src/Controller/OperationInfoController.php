@@ -9,6 +9,7 @@ use MajesticDev\CommandNet\Entity\Enum\RsvpStatus;
 use MajesticDev\CommandNet\Entity\Operation;
 use MajesticDev\CommandNetS3\Entity\Enum\ModKind;
 use MajesticDev\CommandNetS3\Entity\GameServer;
+use MajesticDev\CommandNetS3\Entity\ModPackVersion;
 use MajesticDev\CommandNetS3\Entity\OperationPage;
 use MajesticDev\CommandNetS3\Entity\ServerMod;
 use MajesticDev\CommandNetS3\Repository\BriefingRepository;
@@ -18,6 +19,7 @@ use MajesticDev\CommandNetS3\Repository\ServerModRepository;
 use MajesticDev\CommandNetS3\Service\CurrentOperationFinder;
 use MajesticDev\CommandNetS3\Service\MissionModList;
 use MajesticDev\CommandNetS3\Service\ModListParser;
+use MajesticDev\CommandNetS3\Service\ModPackService;
 use MajesticDev\CommandNetS3\Service\OperationPageParser as Parser;
 use MajesticDev\CommandNetS3\Service\ParsedMod;
 use MajesticDev\CommandNetS3\Service\PresetRenderer;
@@ -31,9 +33,10 @@ use Symfony\Component\Routing\Attribute\Route;
  * shows the operation's current details, RSVPs, briefing, mods and server state; the only
  * stored page content is what staff typed into the Operation Page.
  *
- * The mod list is the one on the mission built for the operation (typed, or from an uploaded
- * launcher preset), falling back to the mods tracked on the operation's server. Players download
- * a launcher preset generated from that same list.
+ * The mod list is the one on the newest mission built for the operation that has one (typed, or
+ * from an uploaded launcher preset), else the current version of its deployment's modpack, else
+ * the mods tracked on the operation's server. Players download a launcher preset generated from
+ * that same list.
  *
  * ponytail: the server is queried on every view (up to a couple of seconds if it is down). Cache
  * the result for a short time if this page gets busy.
@@ -47,6 +50,7 @@ class OperationInfoController extends AbstractController
         private readonly ServerModRepository $modRepository,
         private readonly MissionRepository $missionRepository,
         private readonly MissionModList $missionModList,
+        private readonly ModPackService $modPackService,
         private readonly PresetRenderer $presetRenderer,
         private readonly ServerQuery $serverQuery,
     ) {
@@ -73,12 +77,12 @@ class OperationInfoController extends AbstractController
     {
         $this->denyAccessUnlessGranted('command-net-s3.operation_info.view');
 
-        $mods = $this->modsFor($operation, $this->visiblePage($operation)?->getServer())['parsed'];
-        if ($mods === []) {
+        $mods = $this->modsFor($operation, $this->visiblePage($operation)?->getServer());
+        if ($mods['parsed'] === []) {
             throw $this->createNotFoundException('This operation has no mod list.');
         }
 
-        return $this->presetRenderer->download($operation->getTitle(), $mods);
+        return $this->presetRenderer->download($mods['name'], $mods['parsed']);
     }
 
     private function page(?Operation $operation): Response
@@ -138,6 +142,12 @@ class OperationInfoController extends AbstractController
             'server' => $server,
             'serverInfo' => $server !== null ? $this->serverQuery->query($server) : null,
             'mods' => $mods['rows'],
+            'modpack' => $mods['pack'] !== null ? [
+                'name' => $mods['pack']->getModPack()->getName(),
+                'label' => $mods['pack']->getLabel(),
+                'changes' => mb_strimwidth(trim((string)$mods['pack']->getChangelog()), 0, 600, '…'),
+                'date' => $mods['pack']->getCreatedAt(),
+            ] : null,
             'attending' => $attending,
             'maybe' => $maybe,
             'showCountdown' => in_array($operation->getStatus(), [OperationStatus::SCHEDULED, OperationStatus::IN_PROGRESS], true),
@@ -159,29 +169,32 @@ class OperationInfoController extends AbstractController
 
     /**
      * The operation's mods, as the list to generate a preset from and the rows the page shows.
+     * In order: the newest mission for the operation that has a mod list (its own override), then
+     * the current version of its deployment's modpack, then the mods tracked on its server.
      *
-     * @return array{parsed: list<ParsedMod>, rows: list<array{name: string, dlc: bool, url: ?string, version: ?string}>}
+     * @return array{parsed: list<ParsedMod>, rows: list<array{name: string, dlc: bool, url: ?string, version: ?string}>, name: string, pack: ?ModPackVersion}
      */
     private function modsFor(Operation $operation, ?GameServer $server): array
     {
-        $mission = $this->missionRepository->findOneBy(['operation' => $operation], ['id' => 'DESC']);
-        $parsed = $mission !== null ? $this->missionModList->forMission($mission) : [];
-        if ($parsed !== []) {
-            return [
-                'parsed' => $parsed,
-                'rows' => array_map(static fn (ParsedMod $mod) => [
-                    'name' => $mod->name,
-                    'dlc' => $mod->kind === ModKind::DLC,
-                    'url' => ModListParser::url($mod->kind, $mod->steamId),
-                    'version' => null,
-                ], $parsed),
-            ];
+        foreach ($this->missionRepository->findBy(['operation' => $operation], ['id' => 'DESC']) as $mission) {
+            $parsed = $this->missionModList->forMission($mission);
+            if ($parsed !== []) {
+                return $this->fromList($parsed, $operation->getTitle(), null);
+            }
+        }
+
+        $pack = $this->modPackService->currentFor($operation->getDeployment());
+        $parsed = $this->modPackService->mods($pack);
+        if ($pack !== null && $parsed !== []) {
+            return $this->fromList($parsed, $pack->getModPack()->getName() . ' ' . $pack->getLabel(), $pack);
         }
 
         /** @var list<ServerMod> $serverMods */
         $serverMods = $server !== null ? $this->modRepository->findBy(['server' => $server], ['name' => 'ASC']) : [];
 
         return [
+            'name' => $operation->getTitle(),
+            'pack' => null,
             'parsed' => array_map(static fn (ServerMod $mod) => new ParsedMod($mod->getName(), ModKind::MOD, $mod->getWorkshopId()), $serverMods),
             'rows' => array_map(static fn (ServerMod $mod) => [
                 'name' => $mod->getName(),
@@ -189,6 +202,25 @@ class OperationInfoController extends AbstractController
                 'url' => ModListParser::url(ModKind::MOD, $mod->getWorkshopId()),
                 'version' => $mod->getInstalledVersion(),
             ], $serverMods),
+        ];
+    }
+
+    /**
+     * @param list<ParsedMod> $parsed
+     * @return array{parsed: list<ParsedMod>, rows: list<array{name: string, dlc: bool, url: ?string, version: ?string}>, name: string, pack: ?ModPackVersion}
+     */
+    private function fromList(array $parsed, string $name, ?ModPackVersion $pack): array
+    {
+        return [
+            'name' => $name,
+            'pack' => $pack,
+            'parsed' => $parsed,
+            'rows' => array_map(static fn (ParsedMod $mod) => [
+                'name' => $mod->name,
+                'dlc' => $mod->kind === ModKind::DLC,
+                'url' => ModListParser::url($mod->kind, $mod->steamId),
+                'version' => null,
+            ], $parsed),
         ];
     }
 }

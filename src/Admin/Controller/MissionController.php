@@ -9,6 +9,9 @@ use Forumify\Core\Entity\User;
 use MajesticDev\CommandNetS3\Admin\Form\MissionType;
 use MajesticDev\CommandNetS3\Entity\Mission;
 use MajesticDev\CommandNetS3\Service\MissionModList;
+use MajesticDev\CommandNetS3\Service\MissionVersionUploader;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\Service\Attribute\Required;
@@ -39,11 +42,13 @@ class MissionController extends AbstractCrudController
     }
 
     private MissionModList $modList;
+    private MissionVersionUploader $uploader;
 
     #[Required]
-    public function setModList(MissionModList $modList): void
+    public function setModList(MissionModList $modList, MissionVersionUploader $uploader): void
     {
         $this->modList = $modList;
+        $this->uploader = $uploader;
     }
 
     protected function getForm(?object $data): FormInterface
@@ -51,7 +56,10 @@ class MissionController extends AbstractCrudController
         // Start the mod list box from what is stored, so editing the text edits the list.
         $modText = $data instanceof Mission && $data->getId() !== null ? $this->modList->toText($data) : '';
 
-        return $this->createForm(MissionType::class, $data, ['mod_text' => $modText]);
+        return $this->createForm(MissionType::class, $data, [
+            'mod_text' => $modText,
+            'with_version' => !$data instanceof Mission || $data->getId() === null,
+        ]);
     }
 
     protected function save(bool $isNew, FormInterface $form): object
@@ -71,6 +79,26 @@ class MissionController extends AbstractCrudController
             $this->modList->replace($saved, $mods['mods']);
         }
 
+        if ($isNew && $saved instanceof Mission && $form->has('version')) {
+            /** @var array{label: ?string, notes: ?string, file: ?UploadedFile} $version */
+            $version = $form->get('version')->getData();
+            if ($version['file'] instanceof UploadedFile) {
+                $this->uploader->upload($saved, (string)$version['label'], $version['notes'], $version['file'], $user instanceof User ? $user : null);
+            }
+        }
+
         return $saved;
+    }
+
+    /**
+     * A new mission lands on its own page, where versions, the mod list and feedback live.
+     */
+    protected function redirectAfterSave(mixed $entity, bool $isNew): Response
+    {
+        if ($isNew && $entity instanceof Mission) {
+            return $this->redirectToRoute('forumify_admin_command_net_s3_mission', ['id' => $entity->getId()]);
+        }
+
+        return parent::redirectAfterSave($entity, $isNew);
     }
 }

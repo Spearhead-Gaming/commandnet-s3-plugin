@@ -24,8 +24,10 @@ class MissionType extends AbstractType
         $resolver->setDefaults([
             'data_class' => Mission::class,
             'mod_text' => '',
+            'with_version' => false,
         ]);
         $resolver->setAllowedTypes('mod_text', 'string');
+        $resolver->setAllowedTypes('with_version', 'bool');
     }
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -50,5 +52,14 @@ class MissionType extends AbstractType
                 'mod_text' => $options['mod_text'],
             ])
         ;
+
+        // Only when creating: later versions go through "Upload a version" on the mission page.
+        if ($options['with_version']) {
+            $builder->add('version', MissionVersionType::class, [
+                'mapped' => false,
+                'optional' => true,
+                'label' => 'First version (optional)',
+            ]);
+        }
     }
 }

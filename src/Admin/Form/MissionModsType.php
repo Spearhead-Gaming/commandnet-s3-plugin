@@ -43,13 +43,14 @@ class MissionModsType extends AbstractType
                 'required' => false,
                 'label' => 'Arma 3 Launcher preset',
                 'help' => 'In the Arma 3 Launcher: Mods, Preset, Export. Uploading a preset replaces the list below. The file is only read for its mods and never stored or shared; players get a fresh preset generated from the list.',
-                // The launcher's export starts with an XML declaration line, so PHP reports it as text/xml, not text/html.
+                // The launcher's export starts with an XML declaration line, so PHP reports it as text/xml, not text/html,
+                // and one saved with a byte-order mark is sniffed as text/x-affix.
                 // The file is never stored or served, and the parser rejects anything without mod rows anyway.
                 'constraints' => [new File(
                     maxSize: '2M',
                     extensions: [
-                        'html' => ['text/html', 'application/xhtml+xml', 'text/xml', 'application/xml', 'text/plain'],
-                        'htm' => ['text/html', 'application/xhtml+xml', 'text/xml', 'application/xml', 'text/plain'],
+                        'html' => ['text/html', 'application/xhtml+xml', 'text/xml', 'application/xml', 'text/plain', 'text/x-affix'],
+                        'htm' => ['text/html', 'application/xhtml+xml', 'text/xml', 'application/xml', 'text/plain', 'text/x-affix'],
                     ],
                     extensionsMessage: 'Upload the .html file the Arma 3 Launcher exports.',
                 )],
