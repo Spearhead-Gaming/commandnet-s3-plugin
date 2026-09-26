@@ -18,6 +18,7 @@ use MajesticDev\CommandNetS3\Repository\ServerModRepository;
 use MajesticDev\CommandNetS3\Service\CurrentOperationFinder;
 use MajesticDev\CommandNetS3\Service\MissionModList;
 use MajesticDev\CommandNetS3\Service\ModListParser;
+use MajesticDev\CommandNetS3\Service\OperationPageDetails;
 use MajesticDev\CommandNetS3\Service\OperationPageParser as Parser;
 use MajesticDev\CommandNetS3\Service\ParsedMod;
 use MajesticDev\CommandNetS3\Service\PresetRenderer;
@@ -49,6 +50,7 @@ class OperationInfoController extends AbstractController
         private readonly MissionModList $missionModList,
         private readonly PresetRenderer $presetRenderer,
         private readonly ServerQuery $serverQuery,
+        private readonly OperationPageDetails $pageDetails,
     ) {
     }
 
@@ -73,7 +75,7 @@ class OperationInfoController extends AbstractController
     {
         $this->denyAccessUnlessGranted('command-net-s3.operation_info.view');
 
-        $mods = $this->modsFor($operation, $this->visiblePage($operation)?->getServer())['parsed'];
+        $mods = $this->modsFor($operation, $this->pageDetails->forPage($this->visiblePage($operation))['server'])['parsed'];
         if ($mods === []) {
             throw $this->createNotFoundException('This operation has no mod list.');
         }
@@ -113,7 +115,9 @@ class OperationInfoController extends AbstractController
             $summary = mb_strimwidth(trim(strip_tags($briefing->getTaskPurpose())), 0, 300, '…');
         }
 
-        $server = $page?->getServer();
+        // The page's own value, else its Deployment's, else the S3-wide default.
+        $details = $this->pageDetails->forPage($page);
+        $server = $details['server'];
         $mods = $this->modsFor($operation, $server);
 
         // A link typed on the Operation Page wins; otherwise the preset generated from the list.
@@ -129,12 +133,12 @@ class OperationInfoController extends AbstractController
             'timeline' => Parser::rows($page?->getTimeline(), 3),
             'taskOrg' => Parser::taskOrg($page?->getTaskOrg()),
             'missionData' => Parser::rows($page?->getMissionData(), 2),
-            'comms' => Parser::rows($page?->getComms(), 3),
-            'roe' => Parser::lines($page?->getRoe()),
-            'checklist' => Parser::lines($page?->getChecklist()),
-            'quickLinks' => Parser::links($page?->getQuickLinks()),
+            'comms' => Parser::comms($details['comms']),
+            'roe' => Parser::lines($details['roe']),
+            'checklist' => Parser::lines($details['checklist']),
+            'quickLinks' => Parser::links($details['quickLinks']),
             'presetUrl' => $presetUrl,
-            'steamUrl' => Parser::safeUrl($page?->getSteamCollectionUrl()),
+            'steamUrl' => Parser::safeUrl($details['steamCollectionUrl']),
             'server' => $server,
             'serverInfo' => $server !== null ? $this->serverQuery->query($server) : null,
             'mods' => $mods['rows'],

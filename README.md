@@ -241,6 +241,28 @@ A live page for an operation, ported from the community's static operations-page
   list, it falls back to the mods tracked on the chosen server, shown with their versions.
   DLC and local mods are marked, and the Version column appears only when a row has one. A
   preset link typed on the Operation Page overrides the generated download.
+- **Pages are created for you.** Saving an operation of type Operation creates its page at
+  once, including every operation a Deployment's **Generate Operations** makes, so there is
+  nothing to add by hand. The page starts empty and unpublished; edit it like any other.
+  Patrols, fun days, trainings and meetings don't get one (add it under Operation Pages if you
+  want one).
+- **Order numbers count per Deployment**: `26-10-03` is the third operation of the Deployment
+  starting in October 2026. With no Deployment the number counts within the year (`26-04`).
+  Numbers go out in creation order, and generation creates operations by date, so a generated
+  Deployment is numbered in date order. The number is only a starting value: edit it freely.
+  Numbers typed in another shape (`OP-2026-014`) are ignored when working out the next one.
+- **Set the shared details once.** The server, Steam collection link, comms plan, ROE,
+  pre-op checklist and quick links rarely change between operations, so they inherit in three
+  tiers: the operation page's own value, else its Deployment's (**Zeus / GM → Deployment
+  Details**, one record per Deployment), else the S3-wide default (**Zeus / GM → Page
+  Defaults**). Edit one place and every page below it follows. A blank box counts as "not
+  filled in", so to make one operation different, type the different value on its page. An
+  unpublished page still hides all of it from non-staff. Timeline, task organization, mission
+  data, summary and order number stay per operation.
+- **Operations that existed before this** can be given pages in one go:
+  `bin/console command-net-s3:operation-pages:backfill --dry-run` shows what would be
+  created, then run it without `--dry-run`. It only does upcoming operations unless you add
+  `--all`, and numbers oldest first.
 - **Stored on an Operation Page**, edited under **Zeus / GM → Operation Pages**: order number,
   one-line summary, server, preset and Steam collection links, and text boxes for the
   timeline, task organization, mission data, comms plan, ROE, pre-op checklist and quick

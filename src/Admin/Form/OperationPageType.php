@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MajesticDev\CommandNetS3\Admin\Form;
 
+use Doctrine\ORM\EntityRepository;
 use MajesticDev\CommandNet\Entity\Operation;
 use MajesticDev\CommandNetS3\Entity\GameServer;
 use MajesticDev\CommandNetS3\Entity\OperationPage;
@@ -36,7 +37,22 @@ class OperationPageType extends AbstractType
             ->add('operation', EntityType::class, [
                 'class' => Operation::class,
                 'choice_label' => 'title',
-                'help' => 'The page shows this operation\'s title, dates, status, OPORD, RSVPs and briefing live. Only what is below is stored here.',
+                // Operations get a page automatically when they are created, so this list is for
+                // the ones that don't have one (an older operation, or another type). A page's own
+                // operation stays selectable while editing it.
+                'query_builder' => static function (EntityRepository $repository) use ($options) {
+                    $qb = $repository->createQueryBuilder('o')
+                        ->leftJoin(OperationPage::class, 'existing', 'WITH', 'existing.operation = o')
+                        ->orderBy('o.startDateTime', 'DESC');
+
+                    $current = $options['data'] ?? null;
+                    if ($current instanceof OperationPage && $current->getId() !== null) {
+                        return $qb->where('existing.id IS NULL OR existing.id = :current')->setParameter('current', $current->getId());
+                    }
+
+                    return $qb->where('existing.id IS NULL');
+                },
+                'help' => 'Pages are created automatically for new operations, so this only lists operations without one. The page shows the operation\'s title, dates, status, OPORD, RSVPs and briefing live. Only what is below is stored here. The server, Steam link, comms plan, ROE, checklist and quick links can be left blank: the page then uses its Deployment\'s details (Zeus / GM → Deployment Details), or the S3-wide Page Defaults.',
             ])
             ->add('published', CheckboxType::class, [
                 'required' => false,
@@ -45,7 +61,7 @@ class OperationPageType extends AbstractType
             ->add('orderNumber', TextType::class, [
                 'required' => false,
                 'label' => 'Order number',
-                'help' => 'For example 26-04.',
+                'help' => 'Filled in automatically when the page is created: 26-10-03 is the third operation of the Deployment starting in October 2026 (26-04 style, counted by year, when there is no Deployment). Change it if you need to.',
                 'constraints' => [new Length(max: 30)],
             ])
             ->add('summary', TextType::class, [
@@ -89,8 +105,8 @@ class OperationPageType extends AbstractType
             ))
             ->add('comms', TextareaType::class, $this->lines(
                 'Comms plan',
-                'One per line: net | channel | frequency',
-                "Command | 1 | 40.100\nAlpha | 2 | 40.200",
+                'One per line: net | frequency',
+                "Command | 40.100\nAlpha | 40.200",
             ))
             ->add('roe', TextareaType::class, $this->lines(
                 'Rules of engagement',

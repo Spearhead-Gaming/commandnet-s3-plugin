@@ -1,0 +1,16 @@
+{% extends '@Forumify/admin/base.html.twig' %}
+
+{% block title_page %}Page Defaults{% endblock %}
+
+{% block body %}
+    <h1 class="mb-1">Page Defaults</h1>
+    <p class="alert-info mb-4">
+        Set these once and every operation page uses them. A page shows its own value if it has one, otherwise its
+        Deployment's details (Zeus / GM &rarr; Deployment Details), otherwise what is set here. Leave a box empty to
+        set no default for it.
+    </p>
+    {% if not canManage %}
+        <p class="text-small mb-4">You can view these defaults but not change them.</p>
+    {% endif %}
+    {% include '@Forumify/admin/components/simple_form.html.twig' with { form: form } %}
+{% endblock %}

@@ -32,6 +32,21 @@ final class OperationPageParser
     }
 
     /**
+     * The comms plan: "net | frequency" per line. Text saved when the format was "net | channel |
+     * frequency" still reads correctly: a line with a third part shows its first and third, so
+     * the channel drops out instead of turning up as the frequency.
+     *
+     * @return list<array{0: string, 1: string}>
+     */
+    public static function comms(?string $text): array
+    {
+        return array_map(
+            static fn (array $cells): array => [$cells[0], $cells[2] !== '' ? $cells[2] : $cells[1]],
+            self::rows($text, 3),
+        );
+    }
+
+    /**
      * Non-blank trimmed lines.
      *
      * @return list<string>
