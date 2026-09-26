@@ -281,8 +281,13 @@
             {% if presetUrl or steamUrl %}
               <div class="modpack">
                 <div>
-                  <h3>Mod-Pack &mdash; {{ operation.title }}</h3>
-                  <p>{{ mods|length }} mods</p>
+                  {% if modpack %}
+                    <h3>{{ modpack.name }} &mdash; {{ modpack.label }}</h3>
+                    <p>{{ mods|length }} mods &middot; updated {{ modpack.date|date('d M Y') }}</p>
+                  {% else %}
+                    <h3>Mod-Pack &mdash; {{ operation.title }}</h3>
+                    <p>{{ mods|length }} mods</p>
+                  {% endif %}
                 </div>
                 <div style="display:flex;gap:10px;flex-wrap:wrap">
                   {% if presetUrl %}
@@ -294,6 +299,11 @@
                   {% if steamUrl %}<a class="btn" href="{{ steamUrl }}" target="_blank" rel="noopener noreferrer">Steam Collection</a>{% endif %}
                 </div>
               </div>
+            {% endif %}
+
+            {% if modpack and modpack.changes %}
+              <p style="margin:14px 0 0;white-space:pre-line"><b>What changed in {{ modpack.label }}:</b>
+{{ modpack.changes }}</p>
             {% endif %}
 
             {% if mods %}

@@ -55,6 +55,13 @@ bin/console forumify:plugins:activate majesticdev/commandnet-s3-plugin
 bin/console doctrine:migrations:migrate
 ```
 
+**The dev app's `vendor/majesticdev/commandnet-s3-plugin` is a symlink to the *main* checkout**
+(`/mnt/g/Github Repos/commandnet-s3-plugin`), not to a Claude worktree. To test a worktree's
+code in the dev stack, repoint that symlink at the worktree (`ln -sfn`, from
+`/usr/src/app/vendor/majesticdev` inside the container) and put it back afterwards. In Git Bash
+set `MSYS_NO_PATHCONV=1` or `docker exec` mangles `/usr/src/app`-style paths. Twig edits to an
+already-rendered template also needed a `cache:clear` here, despite the note above.
+
 ## Commands
 
 ```bash

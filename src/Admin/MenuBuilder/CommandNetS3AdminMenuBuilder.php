@@ -38,6 +38,7 @@ class CommandNetS3AdminMenuBuilder implements AdminMenuBuilderInterface
                 ['SOP Library', 'forumify_admin_command_net_s3_sops_list', 'command-net-s3.admin.sop.view'],
                 ['SOP Versions', 'forumify_admin_command_net_s3_sop_versions_list', 'command-net-s3.admin.sop.view'],
                 ['Missions', 'forumify_admin_command_net_s3_missions_list', 'command-net-s3.admin.mission.view'],
+                ['Modpacks', 'forumify_admin_command_net_s3_mod_packs_list', 'command-net-s3.admin.modpack.view'],
                 ['Loadout Check', 'forumify_admin_command_net_s3_loadout_check', 'command-net-s3.admin.loadout.view'],
                 ['Kit Approvals', 'forumify_admin_command_net_s3_kit_approvals_list', 'command-net-s3.admin.loadout.view'],
             ],

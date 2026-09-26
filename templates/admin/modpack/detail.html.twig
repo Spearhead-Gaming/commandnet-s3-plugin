@@ -1,0 +1,59 @@
+{% extends '@Forumify/admin/base.html.twig' %}
+
+{% block title_page %}{{ pack.name }}{% endblock %}
+
+{% block body %}
+    <div class="flex items-center justify-between gap-2 mb-2">
+        <h1 class="mb-0">{{ pack.name }}</h1>
+        {% if canManage %}
+            <a class="btn-primary" href="{{ path('forumify_admin_command_net_s3_mod_pack_publish', { id: pack.id }) }}">
+                <i class="ph ph-upload-simple"></i> Publish a version
+            </a>
+        {% endif %}
+    </div>
+    <p class="text-small mb-4">
+        Modpack for {{ pack.deployment ? pack.deployment.name : 'no deployment' }}. Its newest version is the one operations in
+        the deployment use, unless their mission has its own mod list. Every version stays downloadable, so you can roll back.
+    </p>
+
+    {% if versions is empty %}
+        <p>No versions published yet.</p>
+    {% endif %}
+
+    {% for version in versions %}
+        <div class="card mb-4">
+            <div class="card-title flex items-center justify-between gap-2">
+                <span>{{ version.label }}{% if loop.first %} <span class="tag">Current</span>{% endif %}</span>
+                <a class="btn-outlined btn-small" href="{{ path('forumify_admin_command_net_s3_mod_pack_preset', { id: version.id }) }}">
+                    <i class="ph ph-download-simple"></i> Download preset
+                </a>
+            </div>
+            <div class="card-body">
+                <p class="text-small mb-2">
+                    Published {{ version.createdAt|format_date }}{% if version.createdBy %} by {{ version.createdBy.displayName }}{% endif %}
+                </p>
+                {% if version.changelog %}
+                    <p class="mb-0">{{ version.changelog|nl2br }}</p>
+                {% endif %}
+                {% if loop.first and current %}
+                    <details class="mt-2">
+                        <summary class="text-small">Mods in this version ({{ current|length }})</summary>
+                        <ul class="p-0 mt-1">
+                            {% for mod in current %}
+                                <li>
+                                    {{ mod.name }}
+                                    {% if mod.dlc %}<span class="tag">DLC</span>{% endif %}
+                                    {% if mod.url %}
+                                        <a class="text-small" href="{{ mod.url }}" target="_blank" rel="noopener noreferrer">Steam</a>
+                                    {% else %}
+                                        <span class="tag">Local</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </details>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+{% endblock %}

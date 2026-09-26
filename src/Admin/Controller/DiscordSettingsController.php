@@ -32,6 +32,11 @@ class DiscordSettingsController extends AbstractController
                 'label' => 'Announce new SOP / doctrine versions',
                 'help' => 'Asks members to read and acknowledge the new version.',
             ])
+            ->add('announceModPackVersions', CheckboxType::class, [
+                'required' => false,
+                'label' => 'Announce new modpack versions',
+                'help' => 'Posts what changed, so players know to update their mods before the next operation.',
+            ])
             ->getForm()
             ->handleRequest($request);
 

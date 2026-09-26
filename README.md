@@ -15,9 +15,9 @@ Built for a specific MILSIM community's Forumify install; not a general-purpose 
 
 - PHP 8.4 or newer
 - A Forumify 1.3.x install
-- [`commandnet-plugin`](https://github.com/Spearhead-Gaming/commandnet-plugin) — required.
-  Briefings hang off its `Operation`, and the loadout check reads its `Equipment`,
-  `Position` and `Unit` data.
+- [`commandnet-plugin`](https://github.com/Spearhead-Gaming/commandnet-plugin) 1.1 or newer —
+  required. Briefings hang off its `Operation`, the deployment modpack off its `Deployment`
+  (added in 1.1.0), and the loadout check reads its `Equipment`, `Position` and `Unit` data.
 - MySQL
 - A writable `var/` directory on the install: uploaded mission files are kept in
   `var/s3-missions/`
@@ -59,6 +59,7 @@ All three phases of the spec are built.
 | Extra | S3 dashboard and site menu item | Built |
 | Extra | Operation information page | Built, extra sections typed as one entry per line |
 | Extra | Mission mod lists and generated launcher preset | Built, typed or from an uploaded launcher export |
+| Extra | Deployment modpack with versions and changelog | Built, versions from a launcher export or typed, changelog drafted from the diff |
 
 Nothing here has automated tests. It has been checked statically (container, Twig and
 syntax lint, schema drift) plus targeted runs of the riskiest logic: the server query
@@ -74,6 +75,12 @@ launcher export attached, then checking the mission page, the generated download
 operation information page; editing the list by typing it (a DLC and a local mod included);
 the two error paths (a bad typed line, a file that isn't a preset); an operation with no
 mission falling back to its server's mods; and creating an Operation Page in the admin.
+The modpack flow was run the same way, with a real 24-mod Launcher export: creating a pack,
+previewing and publishing versions from a typed list and from uploaded exports, the drafted
+changelog, downloading an older version's preset, the empty-list and bad-line errors, one pack
+per deployment, and the operation page choosing a mission's list, then the pack. Creating a
+mission with a first version, and uploading further versions, were run too. The Discord
+modpack announcement is wired but no message has been sent (no bot in dev).
 **The other pages have not been checked with real data**, so do that with some test data
 before relying on them.
 
@@ -142,11 +149,12 @@ built. Acknowledgements and live notes are not audited.
 Built on the Discord plugin's `BotService::postAnnouncement()`, which posts through its bot
 to each server's announcements channel. The spec's webhook design is superseded by that: the
 bot already exists, and role and rank changes already reach Discord through its role
-mappings. This plugin adds two announcements, each behind a toggle that is **off by
+mappings. This plugin adds three announcements, each behind a toggle that is **off by
 default** under **Discord Announcements**:
 
 - A briefing being marked Ready.
 - A new SOP version being published.
+- A new modpack version being published, with what changed.
 
 A failed bot call is logged and never blocks saving, and `@` is neutralized in staff-entered
 text so a title can't ping a whole server.
@@ -182,6 +190,33 @@ retrievable.
   ids, with external entities and network access off; it is never stored or served back, so
   an uploaded page can't be redistributed. Limits: 2 MB and 500 mods.
 
+- **First version on create**: the create form can also take a version label, notes and the
+  mission file, so a new mission can start with its first build; after creating, you land on the
+  mission page. The **Upload a version** button there adds later versions (same code path,
+  `MissionVersionUploader`).
+
+### Deployment modpack
+
+One modpack per Command Net **Deployment** (normally a month), with a version and changelog for
+every change, so the pack can be tracked and updated instead of retyped per mission.
+
+- Admin: **Mission Development → Modpacks**. Create a pack (a name and its deployment), then
+  **Publish a version** from its page: a label of your choosing (for example `2026.09-r2`),
+  and the mod list as an uploaded Arma 3 Launcher export or typed, exactly like a mission's
+  (same form and parser). The box starts from the current version, so an update is an edit.
+- **Preview changes** drafts the changelog from the difference to the previous version (mods
+  and DLC added or removed; a mod is the same mod when kind and Steam id match, a local mod
+  is matched by name) and puts it in the changelog box to edit. Publishing with an empty
+  changelog uses that draft. Nothing is saved until you publish.
+- Versions are never edited or deleted: each keeps its own list, and **Download preset** on any
+  version gives you that version's launcher preset (rollback).
+- The newest version is the deployment's current one. On the operation information page the mod
+  list is chosen in order: the newest mission for the operation that has a mod list (an
+  override), then the operation's deployment's current modpack version, then the server's
+  tracked mods. The page names the pack and version and shows the changelog.
+- Publishing a version can be announced on Discord (**Announce new modpack versions**, off by
+  default), with the changelog.
+
 ### Live notes
 
 **Live Notes** lets a GM pick an operation and jot timestamped notes during it. Notes can
@@ -207,7 +242,7 @@ The **Command Net S3** admin menu is grouped the way the spec groups the modules
 Dashboard link at the top:
 
 - **Zeus / GM**: Briefings, Zeus Assets, Operation Pages, Live Notes.
-- **Mission Development**: SOP Library, SOP Versions, Missions, Loadout Check, Kit Approvals.
+- **Mission Development**: SOP Library, SOP Versions, Missions, Modpacks, Loadout Check, Kit Approvals.
 - **Server Administration**: Server Status, Game Servers, Server Mods, Discord Announcements,
   Audit Log.
 
@@ -236,9 +271,10 @@ A live page for an operation, ported from the community's static operations-page
 - **Read live on every view**, so it never goes stale: title, status, dates, location, unit,
   RSVP counts, the OPORD body, the briefing's mission and objectives, the countdown, and the
   chosen server's online state, player count and map.
-- **The mod list** is the one on the mission tied to the operation (the newest, if several),
-  and its "Download Mod-Pack" button gives the generated launcher preset. With no mission
-  list, it falls back to the mods tracked on the chosen server, shown with their versions.
+- **The mod list** is, in order: the one on the newest mission tied to the operation that has a
+  mod list; else the current version of the operation's Deployment's modpack (the pack name,
+  version and changelog are shown); else the mods tracked on the chosen server, shown with their
+  versions. Its "Download Mod-Pack" button gives the launcher preset generated from that list.
   DLC and local mods are marked, and the Version column appears only when a row has one. A
   preset link typed on the Operation Page overrides the generated download.
 - **Pages are created for you.** Saving an operation of type Operation creates its page at
@@ -291,6 +327,7 @@ display name, "Command Net S3"), declared in `CommandNetS3Plugin::getPermissions
 | `admin.mission.view` | See missions, versions and feedback; download files |
 | `admin.mission.manage` | Create missions; upload versions and resolve feedback on missions you own |
 | `admin.mission.manage_all` | Leads: edit or delete any mission, upload to or resolve on any |
+| `admin.modpack.view` / `.manage` | See modpacks and download any version's preset / create packs and publish versions |
 | `admin.live_notes.view` / `.manage` | See / add live mission notes |
 | `admin.operation_page.view` / `.manage` | See / edit Operation Pages; `manage` also previews unpublished ones |
 | `briefing.view` | The player-facing briefing page |
@@ -304,7 +341,7 @@ display name, "Command Net S3"), declared in `CommandNetS3Plugin::getPermissions
 `s3_briefing`, `s3_sop`, `s3_sop_version`, `s3_sop_acknowledgement`, `s3_zeus_asset`,
 `s3_mission_kit_approval`, `s3_game_server`, `s3_server_mod`, `s3_mission`,
 `s3_mission_version`, `s3_mission_feedback`, `s3_mission_note`, `s3_operation_page`,
-`s3_mission_mod`. The
+`s3_mission_mod`, `s3_mod_pack`, `s3_mod_pack_version`, `s3_mod_pack_mod`. The
 audit log uses Forumify's
 own `audit_log` table, and Discord settings are stored under the `command_net_s3.discord`
 setting. Uploaded mission files are on disk in `var/s3-missions/`, not in the database.
@@ -317,6 +354,12 @@ setting. Uploaded mission files are on disk in `var/s3-missions/`, not in the da
 - **The mod list belongs to the mission, not to one version**, and changes to it are not
   audited (the list is replaced as a whole). Mods have no per-mod version there; versions
   only appear on the server-mod fallback.
+- **Modpack versions are audited as a whole** (the pack and each version), not mod by mod, and
+  can't be edited or deleted once published; deleting a pack deletes all its versions. The
+  Discord announcement is sent as the version is saved, and nothing checks it was delivered.
+- **The permissions are new, and Forumify grants a new permission to no role.** Give roles
+  `admin.modpack.view` / `.manage` (and `admin.mission.manage` for creating missions) before
+  expecting the Modpacks menu entry.
 - **Times on the operation page follow the site's timezone**, but the timeline and other
   typed sections are literal text. Type the timeline in the timezone the page shows.
 - **Mostly not exercised in a browser.** Only the mission flow and the mod list flow above

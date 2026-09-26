@@ -9,16 +9,14 @@ use MajesticDev\CommandNetS3\Entity\Mission;
 use MajesticDev\CommandNetS3\Entity\MissionFeedback;
 use MajesticDev\CommandNetS3\Entity\MissionVersion;
 use MajesticDev\CommandNetS3\Repository\MissionFeedbackRepository;
-use MajesticDev\CommandNetS3\Repository\MissionVersionRepository;
 use MajesticDev\CommandNetS3\Admin\Form\MissionModsType;
+use MajesticDev\CommandNetS3\Admin\Form\MissionVersionType;
 use MajesticDev\CommandNetS3\Service\MissionModList;
 use MajesticDev\CommandNetS3\Service\MissionStorage;
+use MajesticDev\CommandNetS3\Service\MissionVersionUploader;
 use MajesticDev\CommandNetS3\Service\ModListParser;
 use MajesticDev\CommandNetS3\Service\PresetRenderer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Form\Extension\Core\Type\FileType;
-use Symfony\Component\Form\Extension\Core\Type\TextareaType;
-use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -26,9 +24,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Validator\Constraints\File;
-use Symfony\Component\Validator\Constraints\Length;
-use Symfony\Component\Validator\Constraints\NotBlank;
 
 /**
  * A mission's page: its versions (each downloadable) and the playtest feedback on them. Anyone
@@ -38,9 +33,9 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 class MissionDetailController extends AbstractController
 {
     public function __construct(
-        private readonly MissionVersionRepository $versionRepository,
         private readonly MissionFeedbackRepository $feedbackRepository,
         private readonly MissionStorage $storage,
+        private readonly MissionVersionUploader $uploader,
         private readonly MissionModList $modList,
         private readonly PresetRenderer $presetRenderer,
     ) {
@@ -116,53 +111,13 @@ class MissionDetailController extends AbstractController
             throw $this->createAccessDeniedException();
         }
 
-        $form = $this->createFormBuilder()
-            ->add('label', TextType::class, [
-                'label' => 'Version',
-                'help' => 'For example v1.3.',
-                'constraints' => [new NotBlank(), new Length(max: 50)],
-            ])
-            ->add('notes', TextareaType::class, [
-                'required' => false,
-                'help' => 'What changed in this build.',
-                'attr' => ['rows' => 4],
-            ])
-            ->add('file', FileType::class, [
-                'label' => 'Mission file',
-                'help' => 'One of: ' . implode(', ', MissionStorage::EXTENSIONS) . '. Very large files are limited by the server\'s PHP upload size.',
-                'constraints' => [
-                    new NotBlank(),
-                    new File(maxSize: '256M', extensions: MissionStorage::EXTENSIONS, extensionsMessage: 'Upload a .pbo, .vt or .zip file.'),
-                ],
-            ])
-            ->getForm()
-            ->handleRequest($request);
+        $form = $this->createForm(MissionVersionType::class)->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             /** @var array{label: string, notes: ?string, file: UploadedFile} $data */
             $data = $form->getData();
-            $file = $data['file'];
-            $originalName = $file->getClientOriginalName();
-            $size = (int)$file->getSize();
-
-            $storedName = $this->storage->store($file);
-
-            $version = new MissionVersion();
-            $version->setMission($mission);
-            $version->setLabel($data['label']);
-            $version->setNotes($data['notes']);
-            $version->setOriginalName($originalName);
-            $version->setStoredName($storedName);
-            $version->setSize($size);
             $user = $this->getUser();
-            $version->setUploadedBy($user instanceof User ? $user : null);
-
-            try {
-                $this->versionRepository->save($version);
-            } catch (\Throwable $exception) {
-                $this->storage->remove($storedName); // don't leave a file nothing points to
-                throw $exception;
-            }
+            $this->uploader->upload($mission, $data['label'], $data['notes'], $data['file'], $user instanceof User ? $user : null);
 
             $this->addFlash('success', 'Version uploaded.');
             return $this->redirectToRoute('forumify_admin_command_net_s3_mission', ['id' => $mission->getId()]);
