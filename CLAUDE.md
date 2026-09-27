@@ -22,7 +22,7 @@ Sibling repos under `G:\Github Repos`: **commandnet-plugin** (required dependenc
 plugin's `Briefing`/`OperationPage`/`Mission` hang off its `Operation` entity, and the loadout
 check reads its `Equipment`/`Position`/`Unit`), **commandnet-discord-plugin** (optional —
 Discord announcements; `loadExtension` only imports Discord config when that plugin is
-present), **commandnet-discord-bot**, **command-net-theme**, **forumify-id-card-plugin**.
+present), **commandnet-discord-bot**, **command-net-theme**, **milsim-id-card-plugin**.
 
 ## Local dev
 

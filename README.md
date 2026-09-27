@@ -1,9 +1,14 @@
 # Command Net S3
 
 A [forumify](https://forumify.net) plugin giving S3 (Operations) staff — Mission
-Developers, Server Admins, and Zeus/GMs — the tools they're currently missing. Sibling to
+Developers, Server Admins, and Zeus/GMs — briefings, an SOP library, Zeus assets, a loadout
+tracker, a mission upload/version repository, server status, and mod tracking. Sibling to
 `commandnet-plugin`, which already covers ops calendaring, rosters, promotions, LOAs, and
 awards; this plugin builds on it rather than duplicating it.
+
+![PHP](https://img.shields.io/badge/PHP-%3E%3D8.4-777bb4)
+![Forumify](https://img.shields.io/badge/forumify-%5E1.3-blue)
+![License](https://img.shields.io/badge/license-proprietary-lightgrey)
 
 See [`Plugin Spec.md`](./Plugin%20Spec.md) for the full scope, roadmap, and permissions
 matrix, and [`Forumify S3 Plugin — Feature Tracker.md`](./Forumify%20S3%20Plugin%20—%20Feature%20Tracker.md)
@@ -11,7 +16,31 @@ for the brainstormed feature list the spec was drawn from.
 
 Built for a specific MILSIM community's Forumify install; not a general-purpose skeleton.
 
-## Requirements
+## Contents
+
+- [Requirements](#-requirements)
+- [Install](#-install)
+- [Status](#-status)
+- [Modules](#-modules)
+  - [Briefings](#briefings)
+  - [SOP / doctrine library](#sop--doctrine-library)
+  - [Zeus asset library](#zeus-asset-library)
+  - [Loadout tracker](#loadout-tracker)
+  - [Audit log](#audit-log)
+  - [Discord announcements](#discord-announcements)
+  - [Missions and playtest feedback](#missions-and-playtest-feedback)
+  - [Deployment modpack](#deployment-modpack)
+  - [Live notes](#live-notes)
+  - [Server status and mod tracker](#server-status-and-mod-tracker)
+  - [Admin menu](#admin-menu)
+  - [S3 dashboard and the site menu](#s3-dashboard-and-the-site-menu)
+  - [Operation information page](#operation-information-page)
+- [Permissions](#-permissions)
+- [Tables](#-tables)
+- [Known gaps](#-known-gaps)
+- [Development](#-development)
+
+## 📋 Requirements
 
 - PHP 8.4 or newer
 - A Forumify 1.3.x install
@@ -25,7 +54,7 @@ Built for a specific MILSIM community's Forumify install; not a general-purpose 
   for Discord announcements. Without it everything else works and the announcers simply
   aren't loaded.
 
-## Install
+## 📦 Install
 
 ```bash
 composer require majesticdev/commandnet-s3-plugin
@@ -39,7 +68,7 @@ bin/console forumify:plugins:activate majesticdev/commandnet-s3-plugin
 bin/console doctrine:migrations:migrate
 ```
 
-## Status
+## 🚦 Status
 
 All three phases of the spec are built.
 
@@ -61,6 +90,9 @@ All three phases of the spec are built.
 | Extra | Mission mod lists and generated launcher preset | Built, typed or from an uploaded launcher export |
 | Extra | Deployment modpack with versions and changelog | Built, versions from a launcher export or typed, changelog drafted from the diff |
 
+<details>
+<summary><strong>What's been checked</strong> (no automated tests — expand for the manual/static verification that has been done)</summary>
+
 Nothing here has automated tests. It has been checked statically (container, Twig and
 syntax lint, schema drift) plus targeted runs of the riskiest logic: the server query
 against a local fake server, the mission file storage (name generation, refused extensions,
@@ -81,10 +113,13 @@ changelog, downloading an older version's preset, the empty-list and bad-line er
 per deployment, and the operation page choosing a mission's list, then the pack. Creating a
 mission with a first version, and uploading further versions, were run too. The Discord
 modpack announcement is wired but no message has been sent (no bot in dev).
+
 **The other pages have not been checked with real data**, so do that with some test data
 before relying on them.
 
-## Modules
+</details>
+
+## 🧩 Modules
 
 ### Briefings
 
@@ -137,8 +172,9 @@ Briefings, SOP documents and versions, Zeus assets, kit approvals, game servers,
 mods, missions, mission versions, mission feedback and operation pages implement Forumify's
 `AuditableEntityInterface`, so Forumify itself records who created, changed or removed
 them and which fields changed. That is also the mod update history: every change to a
-mod's installed version is logged with who and when. **Audit Log** is a read-only view of just those entries, so
-S3 leadership can review S3 activity without access to the site-wide log.
+mod's installed version is logged with who and when. **Audit Log** is a read-only view of
+just those entries, so S3 leadership can review S3 activity without access to the site-wide
+log.
 
 It does not record a reason, and kicks, bans and other game-server actions never touch the
 forum database, so they aren't logged. That would need an RCON integration, which isn't
@@ -189,16 +225,15 @@ retrievable.
   mission page and the operation page. The uploaded file is only read for names and Steam
   ids, with external entities and network access off; it is never stored or served back, so
   an uploaded page can't be redistributed. Limits: 2 MB and 500 mods.
-
 - **First version on create**: the create form can also take a version label, notes and the
-  mission file, so a new mission can start with its first build; after creating, you land on the
-  mission page. The **Upload a version** button there adds later versions (same code path,
-  `MissionVersionUploader`).
+  mission file, so a new mission can start with its first build; after creating, you land on
+  the mission page. The **Upload a version** button there adds later versions (same code
+  path, `MissionVersionUploader`).
 
 ### Deployment modpack
 
-One modpack per Command Net **Deployment** (normally a month), with a version and changelog for
-every change, so the pack can be tracked and updated instead of retyped per mission.
+One modpack per Command Net **Deployment** (normally a month), with a version and changelog
+for every change, so the pack can be tracked and updated instead of retyped per mission.
 
 - Admin: **Mission Development → Modpacks**. Create a pack (a name and its deployment), then
   **Publish a version** from its page: a label of your choosing (for example `2026.09-r2`),
@@ -208,10 +243,10 @@ every change, so the pack can be tracked and updated instead of retyped per miss
   and DLC added or removed; a mod is the same mod when kind and Steam id match, a local mod
   is matched by name) and puts it in the changelog box to edit. Publishing with an empty
   changelog uses that draft. Nothing is saved until you publish.
-- Versions are never edited or deleted: each keeps its own list, and **Download preset** on any
-  version gives you that version's launcher preset (rollback).
-- The newest version is the deployment's current one. On the operation information page the mod
-  list is chosen in order: the newest mission for the operation that has a mod list (an
+- Versions are never edited or deleted: each keeps its own list, and **Download preset** on
+  any version gives you that version's launcher preset (rollback).
+- The newest version is the deployment's current one. On the operation information page the
+  mod list is chosen in order: the newest mission for the operation that has a mod list (an
   override), then the operation's deployment's current modpack version, then the server's
   tracked mods. The page names the pack and version and shows the changelog.
 - Publishing a version can be announced on Discord (**Announce new modpack versions**, off by
@@ -227,11 +262,11 @@ that form, which would mean changing `commandnet-plugin`.
 ### Server status and mod tracker
 
 - **Game Servers**: a host and Steam query port per server.
-- **Server Status**: asks each server live, over the Steam query protocol (A2S_INFO), whether
-  it is answering, its name, map, mission, player count and ping, plus how many of its
-  tracked mods are out of date. It cannot show uptime or the loaded mod list, and it isn't
-  RCON. Servers are queried one after another with a short timeout, so many offline servers
-  make the page slow.
+- **Server Status**: asks each server live, over the Steam query protocol (A2S_INFO),
+  whether it is answering, its name, map, mission, player count and ping, plus how many of
+  its tracked mods are out of date. It cannot show uptime or the loaded mod list, and it
+  isn't RCON. Servers are queried one after another with a short timeout, so many offline
+  servers make the page slow.
 - **Server Mods**: the version installed on each server against the version in the client
   modpack, flagged Out of date when the server is behind. Versions are entered by hand and
   compared with `version_compare`, so 1.2.0 is correctly behind 1.10.0.
@@ -242,9 +277,10 @@ The **Command Net S3** admin menu is grouped the way the spec groups the modules
 Dashboard link at the top:
 
 - **Zeus / GM**: Briefings, Zeus Assets, Operation Pages, Live Notes.
-- **Mission Development**: SOP Library, SOP Versions, Missions, Modpacks, Loadout Check, Kit Approvals.
-- **Server Administration**: Server Status, Game Servers, Server Mods, Discord Announcements,
-  Audit Log.
+- **Mission Development**: SOP Library, SOP Versions, Missions, Modpacks, Loadout Check, Kit
+  Approvals.
+- **Server Administration**: Server Status, Game Servers, Server Mods, Discord
+  Announcements, Audit Log.
 
 A category only appears when the user can see something in it, because Forumify's own menu
 filter would otherwise leave an emptied category behind as a blank flyout.
@@ -271,37 +307,37 @@ A live page for an operation, ported from the community's static operations-page
 - **Read live on every view**, so it never goes stale: title, status, dates, location, unit,
   RSVP counts, the OPORD body, the briefing's mission and objectives, the countdown, and the
   chosen server's online state, player count and map.
-- **The mod list** is, in order: the one on the newest mission tied to the operation that has a
-  mod list; else the current version of the operation's Deployment's modpack (the pack name,
-  version and changelog are shown); else the mods tracked on the chosen server, shown with their
-  versions. Its "Download Mod-Pack" button gives the launcher preset generated from that list.
-  DLC and local mods are marked, and the Version column appears only when a row has one. A
-  preset link typed on the Operation Page overrides the generated download.
+- **The mod list** is, in order: the one on the newest mission tied to the operation that has
+  a mod list; else the current version of the operation's Deployment's modpack (the pack
+  name, version and changelog are shown); else the mods tracked on the chosen server, shown
+  with their versions. Its "Download Mod-Pack" button gives the launcher preset generated
+  from that list. DLC and local mods are marked, and the Version column appears only when a
+  row has one. A preset link typed on the Operation Page overrides the generated download.
 - **Pages are created for you.** Saving an operation of type Operation creates its page at
   once, including every operation a Deployment's **Generate Operations** makes, so there is
   nothing to add by hand. The page starts empty and unpublished; edit it like any other.
-  Patrols, fun days, trainings and meetings don't get one (add it under Operation Pages if you
-  want one).
+  Patrols, fun days, trainings and meetings don't get one (add it under Operation Pages if
+  you want one).
 - **Order numbers count per Deployment**: `26-10-03` is the third operation of the Deployment
   starting in October 2026. With no Deployment the number counts within the year (`26-04`).
   Numbers go out in creation order, and generation creates operations by date, so a generated
   Deployment is numbered in date order. The number is only a starting value: edit it freely.
   Numbers typed in another shape (`OP-2026-014`) are ignored when working out the next one.
 - **Set the shared details once.** The server, Steam collection link, comms plan, ROE,
-  pre-op checklist and quick links rarely change between operations, so they inherit in three
-  tiers: the operation page's own value, else its Deployment's (**Zeus / GM → Deployment
-  Details**, one record per Deployment), else the S3-wide default (**Zeus / GM → Page
-  Defaults**). Edit one place and every page below it follows. A blank box counts as "not
-  filled in", so to make one operation different, type the different value on its page. An
-  unpublished page still hides all of it from non-staff. Timeline, task organization, mission
-  data, summary and order number stay per operation.
+  pre-op checklist and quick links rarely change between operations, so they inherit in
+  three tiers: the operation page's own value, else its Deployment's (**Zeus / GM →
+  Deployment Details**, one record per Deployment), else the S3-wide default (**Zeus / GM →
+  Page Defaults**). Edit one place and every page below it follows. A blank box counts as
+  "not filled in", so to make one operation different, type the different value on its page.
+  An unpublished page still hides all of it from non-staff. Timeline, task organization,
+  mission data, summary and order number stay per operation.
 - **Operations that existed before this** can be given pages in one go:
   `bin/console command-net-s3:operation-pages:backfill --dry-run` shows what would be
   created, then run it without `--dry-run`. It only does upcoming operations unless you add
   `--all`, and numbers oldest first.
-- **Stored on an Operation Page**, edited under **Zeus / GM → Operation Pages**: order number,
-  one-line summary, server, preset and Steam collection links, and text boxes for the
-  timeline, task organization, mission data, comms plan, ROE, pre-op checklist and quick
+- **Stored on an Operation Page**, edited under **Zeus / GM → Operation Pages**: order
+  number, one-line summary, server, preset and Steam collection links, and text boxes for
+  the timeline, task organization, mission data, comms plan, ROE, pre-op checklist and quick
   links. Each is one entry per line with columns split by `|`, for example
   `1900 | Platoon Briefing | Full OPORD brief`, and the form shows an example for each.
 - Until an Operation Page is **Published**, only staff (`operation_page.manage`) see its
@@ -310,10 +346,13 @@ A live page for an operation, ported from the community's static operations-page
 - All text is escaped, and a link must start with `http(s)://` or `/`, so a typed
   `javascript:` link is dropped.
 
-## Permissions
+## 🔐 Permissions
 
 Checked as `command-net-s3.<area>.<action>` (the prefix is slugged from the plugin's
 display name, "Command Net S3"), declared in `CommandNetS3Plugin::getPermissions()`.
+
+<details>
+<summary><strong>Full permission table</strong></summary>
 
 | Permission | Grants |
 | --- | --- |
@@ -336,17 +375,22 @@ display name, "Command Net S3"), declared in `CommandNetS3Plugin::getPermissions
 | `dashboard.view` | Open the S3 dashboard |
 | `operation_info.view` | Open the operation information page |
 
-## Tables
+</details>
+
+## 🗄️ Tables
 
 `s3_briefing`, `s3_sop`, `s3_sop_version`, `s3_sop_acknowledgement`, `s3_zeus_asset`,
 `s3_mission_kit_approval`, `s3_game_server`, `s3_server_mod`, `s3_mission`,
 `s3_mission_version`, `s3_mission_feedback`, `s3_mission_note`, `s3_operation_page`,
 `s3_mission_mod`, `s3_mod_pack`, `s3_mod_pack_version`, `s3_mod_pack_mod`. The
-audit log uses Forumify's
-own `audit_log` table, and Discord settings are stored under the `command_net_s3.discord`
-setting. Uploaded mission files are on disk in `var/s3-missions/`, not in the database.
+audit log uses Forumify's own `audit_log` table, and Discord settings are stored under the
+`command_net_s3.discord` setting. Uploaded mission files are on disk in `var/s3-missions/`,
+not in the database.
 
-## Known gaps
+## ⚠️ Known gaps
+
+<details>
+<summary><strong>Expand for the full list</strong></summary>
 
 - **The generated preset is unverified in the real launcher.** It follows the format of a
   real export and reads back to the same list, but nobody has confirmed the Arma 3 Launcher
@@ -354,9 +398,10 @@ setting. Uploaded mission files are on disk in `var/s3-missions/`, not in the da
 - **The mod list belongs to the mission, not to one version**, and changes to it are not
   audited (the list is replaced as a whole). Mods have no per-mod version there; versions
   only appear on the server-mod fallback.
-- **Modpack versions are audited as a whole** (the pack and each version), not mod by mod, and
-  can't be edited or deleted once published; deleting a pack deletes all its versions. The
-  Discord announcement is sent as the version is saved, and nothing checks it was delivered.
+- **Modpack versions are audited as a whole** (the pack and each version), not mod by mod,
+  and can't be edited or deleted once published; deleting a pack deletes all its versions.
+  The Discord announcement is sent as the version is saved, and nothing checks it was
+  delivered.
 - **The permissions are new, and Forumify grants a new permission to no role.** Give roles
   `admin.modpack.view` / `.manage` (and `admin.mission.manage` for creating missions) before
   expecting the Modpacks menu entry.
@@ -401,7 +446,9 @@ setting. Uploaded mission files are on disk in `var/s3-missions/`, not in the da
 - **The operation page design imports its fonts from Google Fonts**, so viewers' browsers
   make that request. Remove the `@import` in `_page.html.twig` to avoid it.
 
-## Development
+</details>
+
+## 🛠️ Development
 
 ```bash
 make quality       # phpcs + phpstan (needs composer install)
